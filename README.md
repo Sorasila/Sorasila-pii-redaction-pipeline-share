@@ -275,6 +275,7 @@ INFO redact document_id=… status=200 seconds=188.8 llm_calls=2 by_role=detecti
 
 - `status`, `seconds`: ผลและเวลา; `reason`: สาเหตุเมื่อไม่สำเร็จ (ชื่อ error และรหัสคงที่)
 - `llm_calls`, `attempt_seconds`: เรียก LLM กี่ครั้ง แต่ละครั้งใช้กี่วินาที
+- `repairs`, `repair_reasons`: หน้านั้นต้องให้ LLM ทำ detection ใหม่กี่ครั้ง และเพราะอะไร เช่น `value_not_found:1` (LLM ตอบค่าที่หาในต้นฉบับไม่เจอ), `detection_unavailable:1` (เรียก LLM ไม่สำเร็จ); `-` = ไม่มี
 - **ไม่มีข้อความเอกสาร ค่า PII หรือข้อความ error จากภายนอก**
 - ต้อง**ปิดการบันทึก request/response body** ที่ gateway, APM และ reverse proxy ทุกชั้น
   เพราะ body มีข้อความต้นฉบับที่มี PII

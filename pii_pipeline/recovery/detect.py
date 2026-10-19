@@ -3,6 +3,7 @@
 from typing import NamedTuple
 
 from ..core.detection import DetectionError, run_detectors
+from ..llm.call_stats import record_repair_reasons
 from ..llm.response import DetectionIssue, DetectionOutcome
 from ..llm.windows import make_text_window
 from .merge import merge_with_selection
@@ -114,6 +115,9 @@ async def detect_window(
             )
             break
         budget.reserve(repair, use_reserved)
+        if attempt > 0:
+            # Why this window is detected again: the previous attempt's issues.
+            record_repair_reasons(issue.reason_code for issue in issues)
         budget.emit(
             "DETECTION_WINDOW_STARTED",
             window_number=window_number,

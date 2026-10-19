@@ -1032,6 +1032,7 @@ def test_residual_summary_reports_fixed_types_and_shapes_only():
             "candidates": 2,
             "by_type": {"ADDRESS": 1, "NAME": 1},
             "with_placeholder": 1,
+            "placeholder_parts": 2,
             "land_prefix_trimmed": 0,
             "unmapped": 1,
             "issue_codes": ["value_not_found", CANARY],
@@ -1039,7 +1040,8 @@ def test_residual_summary_reports_fixed_types_and_shapes_only():
     ]
     assert request_log.residual_summary(events) == (
         "findings:ADDRESS;rules:no;candidates:2;types:ADDRESS_1+NAME_1;"
-        "placeholder:1;land_prefix_trimmed:0;unmapped:1;issues:value_not_found"
+        "placeholder:1;placeholder_parts:2;land_prefix_trimmed:0;unmapped:1;"
+        "issues:value_not_found"
     )
     assert request_log.residual_summary(events[:1]) == "findings:ADDRESS;rules:no"
 

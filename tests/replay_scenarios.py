@@ -234,6 +234,11 @@ SCENARIOS = {
             verify(),
         ],
     ),
+    # Approved 2026-10-19: 10-19 characters allow one edit per 7 characters.
+    "near_copy_short_value": (
+        "ผู้ร้องอยู่บ้านเลขที่ 12/3 อำเภอสมมุติ แจ้งว่า",
+        [detect(("ADDRESS", "อำเภอสมมติ")), verify()],
+    ),
     # Four edits incl. the second character: needs one edit per 10 characters
     # and only the first character exact (approved 2026-10-12).
     "near_copy_needs_the_wide_budget": (
@@ -293,12 +298,23 @@ SCENARIOS = {
         f"ผู้ร้องอยู่ {LOCATION}",
         [detect(), verify("ADDRESS"), detect()],
     ),
-    "residual_value_crossing_placeholder_fails_closed": (
+    # Approved 2026-10-19: a residual value keeps its parts between
+    # placeholders; labels and placeholders alone are dropped.
+    "residual_placeholder_parts_kept": (
         "ที่ดินตาม น.ส. 3 ก. เลขที่ 123 ตำบลทดสอบ ต่อมา",
         [
             detect(),
             verify("ADDRESS"),
             detect(("ADDRESS", "เลขที่ [PII_TITLE_DEED_NUMBER_1] ตำบลทดสอบ")),
+            verify(),
+        ],
+    ),
+    "residual_placeholder_only_fails_closed": (
+        "ผู้ร้อง นายสมชาย ใจดี อยู่ตำบลทดสอบ",
+        [
+            detect(("NAME", "นายสมชาย ใจดี")),
+            verify("ADDRESS"),
+            detect(("ADDRESS", "[PII_NAME_1]")),
         ],
     ),
     "proxy_504_is_retried": (

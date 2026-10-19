@@ -43,7 +43,7 @@
    }
   },
   "log": [
-   "WARNING redact status=502 llm_calls=3 by_role=detection:2,verification:1 http_attempts=3 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=3 recovery_calls=1 last_event=RESIDUAL_CANDIDATES residual=findings:ADDRESS;rules:no;candidates:0;types:none;placeholder:0;land_prefix_trimmed:0;unmapped:0;issues:none selections=- reason=VerificationError(\"Residual recovery made no progress\")"
+   "WARNING redact status=502 llm_calls=3 by_role=detection:2,verification:1 http_attempts=3 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=3 recovery_calls=1 last_event=RESIDUAL_CANDIDATES residual=findings:ADDRESS;rules:no;candidates:0;types:none;placeholder:0;placeholder_parts:0;land_prefix_trimmed:0;unmapped:0;issues:none selections=- reason=VerificationError(\"Residual recovery made no progress\")"
   ]
  },
  "pipeline": {
@@ -115,6 +115,7 @@
     "candidates": 0,
     "by_type": {},
     "with_placeholder": 0,
+    "placeholder_parts": 0,
     "land_prefix_trimmed": 0,
     "unmapped": 0,
     "issue_codes": []

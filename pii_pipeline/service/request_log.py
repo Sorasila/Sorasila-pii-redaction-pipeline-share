@@ -74,6 +74,7 @@ def residual_summary(events: list[dict]) -> str:
             "types:"
             + _tokens(f"{key}_{int(value)}" for key, value in sorted(by_type.items())),
             f"placeholder:{int(last.get('with_placeholder', 0))}",
+            f"placeholder_parts:{int(last.get('placeholder_parts', 0))}",
             f"land_prefix_trimmed:{int(last.get('land_prefix_trimmed', 0))}",
             f"unmapped:{int(last.get('unmapped', 0))}",
             f"issues:{_tokens(last.get('issue_codes') or ())}",
@@ -93,6 +94,21 @@ def attempt_summary(calls: Counter) -> str:
         shown = f"{seconds:.0f}" if outcome == "ok" else f"{outcome}@{seconds:.0f}"
         parts.append(f"{role}:{shown}")
     return ",".join(parts) or "-"
+
+
+def repair_summary(calls: Counter) -> str:
+    """Why initial windows were detected again: issue code -> repairs it caused.
+
+    A repair counts each code of the attempt it repairs once. Residual-round
+    windows are explained by the residual field instead.
+    """
+    prefix = "repair_reason:"
+    reasons = {
+        key[len(prefix) :]: value
+        for key, value in calls.items()
+        if key.startswith(prefix)
+    }
+    return _counts(reasons)
 
 
 def selection_summary(calls: Counter) -> str:
@@ -138,7 +154,8 @@ def log_outcome(
     logger.log(
         level,
         "redact document_id=%s status=%d seconds=%.1f llm_calls=%d by_role=%s "
-        "http_attempts=%d attempt_seconds=%s repairs=%d blank_resends=%s "
+        "http_attempts=%d attempt_seconds=%s repairs=%d repair_reasons=%s "
+        "blank_resends=%s "
         "verification_retries=%d "
         "residual_rounds=%d merge_selections=%d role_calls=%s recovery_calls=%s "
         "last_event=%s residual=%s selections=%s reason=%s",
@@ -155,6 +172,7 @@ def log_outcome(
             if event.get("event") == "DETECTION_WINDOW_STARTED"
             and event.get("recovery")
         ),
+        repair_summary(calls),
         _counts(blank),
         named["VERIFICATION_RETRY"],
         named["RESIDUAL_RECOVERY_STARTED"],

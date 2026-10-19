@@ -153,6 +153,19 @@ def test_whitespace_only_name_copy_resolves_to_the_exact_source_span() -> None:
     )
 
 
+def test_one_ocr_letter_fixed_in_a_short_value_resolves_to_the_source() -> None:
+    # Approved 2026-10-19: the model's "X" -> "0" fix is one edit in 17
+    # characters; the redacted span is still the source text with the "X".
+    case = SMOKE_CASES["ocr-whitespace-fields"]
+    candidates = oracle_candidates(case.case_id)
+    item = next(item for item in candidates if item["pii_type"] == "ID_NUMBER")
+    item["value"] = item["value"].replace("X", "0")
+    assert item["value"] not in case.text
+    assert parse_detection_response(case.text, {"candidates": candidates}) == list(
+        case.expected_matches
+    )
+
+
 @pytest.mark.asyncio
 async def test_ocr_value_repair_is_rejected_without_retry_or_redaction(
     capsys: pytest.CaptureFixture[str],
@@ -160,9 +173,11 @@ async def test_ocr_value_repair_is_rejected_without_retry_or_redaction(
     case_id = "ocr-whitespace-fields"
     case = SMOKE_CASES[case_id]
     candidates = oracle_candidates(case_id)
-    # Short values get no character tolerance.
+    # 17 characters allow two edits (approved 2026-10-19); three are rejected.
     item = next(item for item in candidates if item["pii_type"] == "ID_NUMBER")
-    item["value"] = item["value"].replace("X", "0")
+    item["value"] = (
+        item["value"].replace("X", "0").replace("2345", "2346").replace("-12-", "-17-")
+    )
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
