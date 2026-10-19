@@ -11,7 +11,7 @@
 | ตำแหน่ง | `tools/pdf-core-test/` ใน repo หลัก (ย้ายมาจาก `../pdf-core-test` วันที่ 2026-10-05) |
 | Core ที่ใช้ | detection `pii-detection-v18`, verification `pii-verification-v11`, `automatic-recovery-v3` พร้อม forced conflict resolution, initial legal-option selection, reserved recovery calls, near-copy location (ช่องว่าง/แก้ OCR/ต่อข้ามเส้นแบ่งหน้า) และการส่งซ้ำเมื่อได้คำตอบว่าง |
 | Rule lane | `detect_thai_rule_pii` ทั้ง rule detection และ rule verification: CASE_NUMBER, TITLE_DEED_NUMBER, LAND_PARCEL_NUMBER, OFFICIAL_LETTER_NUMBER, ID_NUMBER, PHONE, FAX, BANK_ACCOUNT_NUMBER, PASSPORT_NUMBER, EMAIL |
-| Tests | harness 79 passed; core 1291 passed (Python 3.12 และ 3.13) |
+| Tests | harness 79 passed; core 1296 passed (Python 3.12 และ 3.13) |
 | Live | วัดบนเครื่อง LLM ทดสอบที่ช้า ต้องวัดซ้ำเมื่อใช้เครื่อง LLM production ได้ |
 
 ## สิ่งที่ต้องมี

@@ -71,6 +71,65 @@ _MULTIPART_CONTENT_TYPE = re.compile(
 Authenticator = Callable[[Request], Awaitable[bool]]
 # Container probes: no authentication, no document, no dependency calls.
 HEALTH_PATHS = frozenset({"/healthz", "/readyz"})
+# Interactive API docs, only when enabled (enable_docs).
+DOCS_PATHS = frozenset({"/docs", "/docs/oauth2-redirect", "/openapi.json"})
+
+# OpenAPI description of POST /redact. The handler reads the raw body itself,
+# so the body, the Bearer token and the responses are declared here for the
+# docs page; they do not change how requests are checked.
+_SAMPLE_PAGE = "ผู้ฟ้องคดี นายสมมุติ ทดลองดี\nโทรศัพท์ 081-000-0000\n"
+_REDACT_OPENAPI = {
+    "requestBody": {
+        "required": True,
+        "description": (
+            "Raw UTF-8 Markdown or text, at most 2000 Unicode code points, "
+            "not wrapped in JSON."
+        ),
+        "content": {
+            "text/markdown": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
+            "text/plain": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
+        },
+    },
+    "security": [{"bearerAuth": []}],
+    "responses": {
+        "200": {
+            "description": (
+                "Redacted text. By default the body is the redacted Markdown; "
+                "with PII_SERVICE_RETURN_METADATA (or _MANIFEST) it is "
+                "multipart/form-data with redacted_md and metadata (and "
+                "pii_manifest). X-Document-Id matches the request log line."
+            ),
+            "headers": {
+                "X-Document-Id": {"schema": {"type": "string", "format": "uuid"}}
+            },
+            "content": {
+                "text/markdown": {"schema": {"type": "string"}},
+                "multipart/form-data": {"schema": {"type": "object"}},
+            },
+        },
+        **{
+            str(code): {
+                "description": text,
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/Error"}
+                    }
+                },
+            }
+            for code, text in (
+                (
+                    400,
+                    "invalid_request: empty, not UTF-8, or already holds [PII_...] placeholders",
+                ),
+                (401, "authentication_failed: missing or wrong Bearer token"),
+                (413, "document_too_large: more than 2000 code points"),
+                (415, "unsupported_media_type: use text/markdown or text/plain, UTF-8"),
+                (502, "processing_failed: detection or verification did not succeed"),
+                (504, "request_timeout: PII_SERVICE_REQUEST_DEADLINE_SECONDS reached"),
+            )
+        },
+    },
+}
 # Stores the prepared delivery's manifest; raising fails the request (502).
 ManifestStore = Callable[[PreparedDelivery], Awaitable[None]]
 
@@ -334,7 +393,7 @@ def _add_error_handlers(app: FastAPI) -> None:
         if error.status_code == 405:
             response = _error(405, "method_not_allowed")
             response.headers["Allow"] = (
-                "GET" if request.url.path in HEALTH_PATHS else "POST"
+                "GET" if request.url.path in HEALTH_PATHS | DOCS_PATHS else "POST"
             )
             return response
         return _error(error.status_code, "invalid_request")
@@ -344,6 +403,33 @@ def _add_error_handlers(app: FastAPI) -> None:
         request: Request, error: RequestValidationError
     ) -> JSONResponse:
         return _error(400, "invalid_request")
+
+
+def _describe_security(app: FastAPI) -> None:
+    """Add the Bearer scheme and the error body to the generated schema."""
+    build = app.openapi
+
+    def openapi() -> dict:
+        if app.openapi_schema is None:
+            schema = build()
+            components = schema.setdefault("components", {})
+            components.setdefault("securitySchemes", {})["bearerAuth"] = {
+                "type": "http",
+                "scheme": "bearer",
+                "description": "PII_SERVICE_API_TOKEN",
+            }
+            components.setdefault("schemas", {})["Error"] = {
+                "type": "object",
+                "properties": {
+                    "error": {"type": "string"},
+                    "document_id": {"type": "string", "format": "uuid"},
+                },
+                "required": ["error"],
+            }
+            app.openapi_schema = schema
+        return app.openapi_schema
+
+    app.openapi = openapi
 
 
 def create_app(
@@ -358,6 +444,7 @@ def create_app(
     store_manifest: ManifestStore | None = None,
     return_manifest: bool = True,
     return_metadata: bool = True,
+    enable_docs: bool = False,
 ) -> FastAPI:
     """Create an adapter with required trusted dependencies and a finite deadline.
 
@@ -372,6 +459,8 @@ def create_app(
     then, and without a store) builds no manifest at all.
     ``return_metadata=False`` as well answers the redacted Markdown itself
     (``text/markdown``). Every success carries the ``X-Document-Id`` header.
+    ``enable_docs`` serves Swagger UI at /docs and the schema at /openapi.json
+    (no token needed to open them; trying /redact still needs one).
     """
     deps = _Dependencies(
         processor,
@@ -389,15 +478,35 @@ def create_app(
 
     # No default public authentication, guessed LLM budgets, or lifecycle-owned client.
     app = FastAPI(
-        docs_url=None, redoc_url=None, openapi_url=None, redirect_slashes=False
+        title="PII Redaction Service",
+        version="1.0",
+        description=(
+            "Redacts PII in Thai OCR Markdown. Click **Authorize** and enter the "
+            "caller token (PII_SERVICE_API_TOKEN), then try POST /redact with a "
+            "synthetic page. A request can take minutes while the LLM works. "
+            "Never paste real documents into a shared page."
+        ),
+        docs_url="/docs" if enable_docs else None,
+        redoc_url=None,
+        openapi_url="/openapi.json" if enable_docs else None,
+        swagger_ui_parameters={"defaultModelsExpandDepth": -1},
+        redirect_slashes=False,
     )
     _add_error_handlers(app)
     # Ready unless the composition that owns the lifecycle says otherwise.
     app.state.ready = True
 
-    @app.post("/redact", response_class=Response)
+    @app.post(
+        "/redact",
+        response_class=Response,
+        summary="Redact PII in one page",
+        openapi_extra=_REDACT_OPENAPI,
+    )
     async def redact_document(request: Request) -> Response:
         return await _redact(request, deps)
+
+    if enable_docs:
+        _describe_security(app)
 
     @app.get("/healthz")
     async def liveness() -> JSONResponse:

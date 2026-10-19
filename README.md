@@ -10,7 +10,7 @@ Service รับข้อความ Markdown ภาษาไทยที่�
 [การทำงานและขอบเขต PII](docs/OVERVIEW.md) ·
 [รันบนเครื่องโดยไม่ใช้ Docker](docs/SETUP_AND_USAGE.md)
 
-> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1291, harness 79) และทดสอบกับ LLM
+> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1296, harness 79) และทดสอบกับ LLM
 > เครื่องทดสอบแล้ว **Dockerfile และตัวอย่าง Compose/Kubernetes ด้านล่างเป็นตัวอย่างอ้างอิง
 > ยังไม่ได้ทดสอบบนแพลตฟอร์มจริง** ปรับตามกติกาของแพลตฟอร์มได้
 
@@ -29,6 +29,7 @@ Service รับข้อความ Markdown ภาษาไทยที่�
 | ไฟล์ / volume / database | **ไม่มี** service ไม่เขียนไฟล์ ใช้ root filesystem แบบอ่านอย่างเดียวได้ |
 | ค่าตั้ง | environment variable ทั้งหมด (ข้อ 3) ไม่ต้องมีไฟล์ `.env` ใน container |
 | Health check | `GET /healthz` (liveness), `GET /readyz` (readiness) ไม่ต้องใช้ token |
+| หน้าทดลอง API | Swagger ที่ `/docs` เปิดด้วย `PII_SERVICE_ENABLE_DOCS=true` (ค่าเริ่มต้นปิด) |
 | Log | stdout/stderr บรรทัดเดียวต่อ request ไม่มีข้อความเอกสารหรือค่า PII |
 | Network ขาออก | HTTPS ไปที่ LLM proxy เท่านั้น |
 | Process | 1 process ต่อ container แล้ว scale ด้วยจำนวน replica (process เดียวรับได้หลาย request พร้อมกัน เพราะเวลาเกือบทั้งหมดคือรอ LLM) |
@@ -90,6 +91,7 @@ Service อ่านค่าจาก environment ของ container ถ้า
 | `LLM_PROXY_MAX_RETRIES` | `2` | ลองใหม่เมื่อ proxy ตอบ 502/503/504 หรือการเชื่อมต่อหลุด (0–2) |
 | `LLM_PROXY_CONNECT_TIMEOUT_SECONDS`, `..._WRITE_...`, `..._POOL_...` | `10`, `30`, `10` | timeout ย่อยต่อครั้ง |
 | `PII_SERVICE_RETURN_METADATA` | `false` | `true` = ตอบ multipart `redacted_md` + `metadata` แทนข้อความล้วน |
+| `PII_SERVICE_ENABLE_DOCS` | `false` | `true` = เปิดหน้า Swagger ที่ `/docs` ให้ลองเรียก API (ข้อ 6.1) แนะนำเฉพาะเครื่องทดสอบ/staging |
 
 ### 3.3 ตัวอย่างไฟล์ค่าตั้ง (ค่าปลอม)
 
@@ -214,6 +216,19 @@ body: ข้อความ UTF-8 ดิบ ไม่เกิน 2000 ตัว
 - `X-Document-Id` และ `document_id` ใน error ตรงกับ log ใช้ติดตามปัญหา
 - รายละเอียดเต็ม: [docs/http-contract.md](docs/http-contract.md)
 
+### 6.1 ลองเรียก API จากหน้า Swagger
+
+ตั้ง `PII_SERVICE_ENABLE_DOCS=true` แล้วเปิด `http://<host>:8080/docs` ในเบราว์เซอร์
+
+1. กด **Authorize** ใส่ค่า `PII_SERVICE_API_TOKEN` (ไม่ต้องพิมพ์คำว่า `Bearer`)
+2. เปิด `POST /redact` กด **Try it out** แก้ข้อความในช่อง body (มีตัวอย่างสังเคราะห์ให้) แล้วกด **Execute**
+3. รอผล (หลายนาทีบนเครื่อง LLM ทดสอบ) ผลอยู่ที่ช่อง *Server response* พร้อม header `x-document-id`
+
+- เปิดหน้า `/docs` และ `/openapi.json` ได้โดยไม่ต้องใช้ token แต่การเรียก `/redact` จากหน้านี้ยังต้องใช้ token เสมอ
+- หน้า Swagger โหลดไฟล์หน้าเว็บจาก `cdn.jsdelivr.net` เบราว์เซอร์ที่เปิดต้องออกอินเทอร์เน็ตได้ (ตัว service ไม่ต้อง)
+- **ใช้ข้อความสังเคราะห์เท่านั้น** เอกสารจริงที่วางในหน้านี้จะผ่านเบราว์เซอร์และอาจถูกบันทึกในประวัติของเครื่อง
+- ค่าเริ่มต้นปิด เพื่อไม่ให้ production เปิดหน้า docs โดยไม่ตั้งใจ
+
 ---
 
 ## 7. Log
@@ -245,6 +260,8 @@ INFO redact document_id=… status=200 seconds=188.8 llm_calls=2 by_role=detecti
 | `No manifest encryptor is configured` | ตั้ง `PII_SERVICE_RETURN_MANIFEST=true` ไว้ ให้เอาออก (ข้อ 3.5) |
 | เรียกจากนอก container ไม่ได้ | service ต้องฟังที่ `0.0.0.0` (ค่าใน Dockerfile) ไม่ใช่ `127.0.0.1` |
 | `/readyz` ตอบ 503 | กำลังเริ่มหรือกำลังปิด รอสักครู่ |
+| `/docs` ได้ `{"error":"not_found"}` | ยังไม่ได้ตั้ง `PII_SERVICE_ENABLE_DOCS=true` |
+| หน้า `/docs` ขาวเปล่า | เบราว์เซอร์โหลดไฟล์จาก `cdn.jsdelivr.net` ไม่ได้ (เครือข่ายปิดอินเทอร์เน็ต) |
 | ทุก request ได้ 401 | token ใน header ไม่ตรงกับ `PII_SERVICE_API_TOKEN` |
 | 502 และ `reason` มี `LlmProxyTransportError` | ต่อ proxy ไม่ได้ (network, URL, certificate) |
 | 502 และ `reason` มี `VerificationError` | ตรวจซ้ำแล้วยังเจอ PII หรือ LLM ใช้งานไม่ได้ช่วงนั้น ส่งใหม่ได้ |

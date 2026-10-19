@@ -91,6 +91,7 @@ def test_settings_defaults_and_env_prefixes_are_frozen():
         "allow_unencrypted_test_manifest": False,
         "return_manifest": False,
         "return_metadata": False,
+        "enable_docs": False,
     }
     assert LlmProxySettings.model_config["env_prefix"] == "LLM_PROXY_"
     assert ServiceSettings.model_config["env_prefix"] == "PII_SERVICE_"

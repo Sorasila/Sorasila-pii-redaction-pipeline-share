@@ -67,6 +67,8 @@ class ServiceSettings(BaseSettings):
     # also returns the metadata, which the manifest is bound to.
     return_manifest: bool = False
     return_metadata: bool = False
+    # Swagger UI at /docs for trying the API (test and staging machines).
+    enable_docs: bool = False
 
     @field_validator("api_token")
     @classmethod
@@ -192,6 +194,7 @@ def create_service_app(
         store_manifest=store.put if store else None,
         return_manifest=settings.return_manifest,
         return_metadata=settings.return_metadata or settings.return_manifest,
+        enable_docs=settings.enable_docs,
     )
 
     @asynccontextmanager
