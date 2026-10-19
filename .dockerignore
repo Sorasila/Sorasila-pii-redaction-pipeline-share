@@ -1,0 +1,10 @@
+# Allow list: the build context holds only what the image needs, so .env,
+# .venv, test data and any new local file can never reach the image.
+*
+!requirements.txt
+!constraints.txt
+!pii_pipeline/
+
+# Never ship compiled or cached files, even inside the package.
+**/__pycache__
+**/*.pyc

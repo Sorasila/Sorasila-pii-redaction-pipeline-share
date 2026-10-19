@@ -167,6 +167,22 @@ Container probes need no token and touch no document, LLM proxy or store:
 (`503 {"status": "not_ready"}` before that and during shutdown). They write no
 request log line.
 
+**Container (reference).** [Dockerfile](Dockerfile) is an example for the
+platform team to adapt: Python 3.13 slim, `pip install -r requirements.txt`
+(versions from `constraints.txt`), only `pii_pipeline/` copied, an unprivileged
+user, port 8080, a `HEALTHCHECK` on `/readyz`, and uvicorn on `0.0.0.0`.
+[.dockerignore](.dockerignore) is an allow list, so `.env`, `.venv` and test
+data never enter the build context. Settings and secrets come from the
+environment at run time (the table below); the image needs no `.env`, no volume
+and no database, and writes no files. Set the platform's stop grace period
+longer than `PII_SERVICE_REQUEST_DEADLINE_SECONDS`, or deploys kill requests in
+progress.
+
+```bash
+docker build -t pii-redaction-service .
+docker run --rm -p 8080:8080 --env-file <env file kept outside the image> pii-redaction-service
+```
+
 It reads `PII_SERVICE_*` settings next to `LLM_PROXY_*` and refuses to start
 when a required one is missing:
 
