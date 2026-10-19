@@ -1,5 +1,5 @@
 {
- "scenario": "residual_value_crossing_placeholder_fails_closed",
+ "scenario": "residual_placeholder_parts_kept",
  "source": "ที่ดินตาม น.ส. 3 ก. เลขที่ 123 ตำบลทดสอบ ต่อมา",
  "calls": [
   {
@@ -31,23 +31,55 @@
    "status": 200,
    "content_type": "application/json",
    "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[{\"pii_type\":\"ADDRESS\",\"value\":\"เลขที่ [PII_TITLE_DEED_NUMBER_1] ตำบลทดสอบ\"}]}}"
+  },
+  {
+   "role": "has_pii",
+   "body_sha256": "34e0e1abefcab4ed4c02ad28db8c2a55534e21ca0925f794004bc431c6e1b461",
+   "context_sha256": "7c65afd4795029aaf7390235a9e8a25542ed54e142138469f6189f9d1dde736d",
+   "prompt_sha256": "5b8da0110d9c15d8345366e5fba793c5ea54a3cb83d406952136ed638336a825",
+   "schema_sha256": "527b933a612b790483cf71a8caa2368246616365f723c8d45b3ee0e2a8bcdd72",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"has_pii\":false,\"findings\":[]}}"
   }
  ],
  "service": {
   "response": {
-   "status": 502,
-   "content_type": "application/json",
-   "json": {
-    "error": "processing_failed",
-    "document_id": "<document_id>"
-   }
+   "status": 200,
+   "content_type": "multipart/form-data",
+   "part_names": [
+    "redacted_md",
+    "pii_manifest",
+    "metadata"
+   ],
+   "redacted_md": "ที่ดินตาม น.ส. 3 ก. เลขที่ [PII_ADDRESS_1] ต่อมา",
+   "metadata": "{\"created_at\":\"<timestamp>\",\"delivery_id\":\"<delivery_id>\",\"detector_version\":\"pii-detection-v18\",\"document_id\":\"<document_id>\",\"redacted_md_sha256\":\"7c65afd4795029aaf7390235a9e8a25542ed54e142138469f6189f9d1dde736d\"}",
+   "envelope_keys": [
+    "protected",
+    "encrypted_key",
+    "iv",
+    "ciphertext",
+    "tag",
+    "aad"
+   ],
+   "envelope_protected": "{\"alg\": \"RSA-OAEP-256\", \"enc\": \"A256GCM\", \"kid\": \"UNENCRYPTED-TEST-ONLY\", \"cty\": \"application/json\"}",
+   "envelope_aad_is_metadata": true,
+   "manifest": "{\"document_id\":\"<document_id>\",\"entries\":[{\"occurrence_index\":1,\"original_value\":\"123 ตำบลทดสอบ\",\"pii_type\":\"ADDRESS\",\"placeholder\":\"[PII_ADDRESS_1]\",\"redacted_at\":\"<timestamp>\"}]}"
   },
   "log": [
-   "WARNING redact status=502 llm_calls=3 by_role=detection:2,verification:1 http_attempts=3 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=3 recovery_calls=1 last_event=RESIDUAL_CANDIDATES residual=findings:ADDRESS;rules:no;candidates:1;types:ADDRESS_1;placeholder:1;land_prefix_trimmed:0;unmapped:1;issues:none selections=- reason=DetectionError(\"Recovery match crosses a protected replacement\")"
+   "INFO redact status=200 llm_calls=4 by_role=detection:2,verification:2 http_attempts=4 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=4 recovery_calls=1 last_event=FINAL_VERIFIED residual=findings:ADDRESS;rules:no;candidates:1;types:ADDRESS_1;placeholder:1;placeholder_parts:1;land_prefix_trimmed:0;unmapped:0;issues:none selections=- reason=-"
   ]
  },
  "pipeline": {
-  "error": "DetectionError: Recovery match crosses a protected replacement",
+  "redacted_md": "ที่ดินตาม น.ส. 3 ก. เลขที่ [PII_ADDRESS_1] ต่อมา",
+  "entries": [
+   [
+    "[PII_ADDRESS_1]",
+    "ADDRESS",
+    1,
+    "123 ตำบลทดสอบ"
+   ]
+  ],
   "events": [
    {
     "event": "RECOVERY_STARTED",
@@ -117,9 +149,25 @@
      "ADDRESS": 1
     },
     "with_placeholder": 1,
+    "placeholder_parts": 1,
     "land_prefix_trimmed": 0,
-    "unmapped": 1,
+    "unmapped": 0,
     "issue_codes": []
+   },
+   {
+    "event": "VERIFICATION_WINDOW_STARTED",
+    "role_calls": 4,
+    "recovery_calls": 1,
+    "window_number": 1,
+    "attempt": 1
+   },
+   {
+    "event": "FINAL_VERIFIED",
+    "role_calls": 4,
+    "recovery_calls": 1,
+    "residual_rounds": 1,
+    "preliminary_issue_windows": 0,
+    "conflict_selection_calls": 0
    }
   ]
  }

@@ -254,3 +254,56 @@ async def test_an_attempt_cut_by_the_call_deadline_is_logged_as_cut(caplog):
     first = fields["attempt_seconds"].split(",")[0]
     assert first == "detection:cut@0"
     assert response.status_code == 200
+
+
+# Measurement for proposal C10 (approved 2026-10-19): why windows are repaired.
+
+
+@pytest.mark.asyncio
+async def test_repair_reasons_name_the_issue_that_caused_each_repair(caplog):
+    caplog.set_level("INFO", logger="pii_pipeline.http_api")
+    detections = []
+
+    def wire(request):
+        form = {key: v[0] for key, v in parse_qs(request.content.decode()).items()}
+        if role_of(json.loads(form["json_schema"])) != "detection":
+            return success({"has_pii": False, "findings": []})
+        detections.append(1)
+        if len(detections) == 1:
+            # A value that is not in the page: value_not_found, so a repair.
+            return success({"candidates": [{"pii_type": "NAME", "value": "ไม่มีในหน้านี้"}]})
+        return success({"candidates": [{"pii_type": "NAME", "value": NAME}]})
+
+    app = app_for(wire)
+    async with (
+        app.router.lifespan_context(app),
+        httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://service.local"
+        ) as caller,
+    ):
+        response = await caller.post(
+            "/redact",
+            content=f"ผู้ฟ้องคดี {NAME}".encode(),
+            headers={
+                "content-type": "text/markdown; charset=utf-8",
+                "authorization": f"Bearer {TOKEN}",
+            },
+        )
+    assert response.status_code == 200
+    (fields,) = log_fields(caplog)
+    assert fields["repairs"] == "1"
+    assert fields["repair_reasons"] == "value_not_found:1"
+
+
+def test_repair_summary_counts_each_code_once_per_repair():
+    from pii_pipeline.llm.call_stats import record_repair_reasons
+    from pii_pipeline.service.request_log import repair_summary
+
+    with collect_call_stats() as calls:
+        record_repair_reasons(["value_not_found", "value_not_found", "invalid_value"])
+        record_repair_reasons(["detection_unavailable"])
+        record_repair_reasons(["value_not_found"])
+    assert repair_summary(calls) == (
+        "detection_unavailable:1,invalid_value:1,value_not_found:2"
+    )
+    assert repair_summary(Counter()) == "-"

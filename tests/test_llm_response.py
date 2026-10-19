@@ -484,6 +484,46 @@ def test_short_values_still_get_whitespace_tolerance():
     ]
 
 
+# Approved 2026-10-19: 10-19 non-whitespace characters allow max(1, length // 7)
+# edits, so one fixed letter in 10-13 characters and two in 14-19.
+_SHORT_SOURCE = "ผู้ร้องอยู่บ้านเลขที่ 12/3 อำเภอสมมุติ แจ้งว่า"
+
+
+@pytest.mark.parametrize(
+    "value,model_copy",
+    [
+        ("อำเภอสมมุติ", "อำเภอสมมติ"),  # 11 characters, one missing vowel
+        ("อำเภอสมมุติ", "อำเภอสมมุตี"),  # last mark changed: runs to word end
+        ("บ้านเลขที่ 12/3", "บ่านเลขทึ่ 12/3"),  # 14 characters, two edits
+    ],
+)
+def test_short_near_copies_within_their_budget_resolve_to_source(value, model_copy):
+    start = _SHORT_SOURCE.index(value)
+    assert _detect(_SHORT_SOURCE, "ADDRESS", model_copy) == [
+        PiiMatch("ADDRESS", value, start, start + len(value))
+    ]
+
+
+@pytest.mark.parametrize(
+    "model_copy",
+    [
+        "อำเภอสนมติ",  # 10 characters, two edits: over the one-edit budget
+        "บ่านเลขทึ่ 12/8",  # 14 characters, three edits
+        "สมมุตี",  # under 10 characters: whitespace tolerance only
+    ],
+)
+def test_short_near_copies_beyond_their_budget_fail_closed(model_copy):
+    with pytest.raises(DetectionResponseError) as raised:
+        _detect(_SHORT_SOURCE, "ADDRESS", model_copy)
+    assert raised.value.reason_code == "value_not_found"
+
+
+def test_short_near_copy_close_to_two_source_texts_is_ambiguous():
+    source = "หนังสือที่ ศย 0001/123 และ ศย 0001/128"
+    with pytest.raises(DetectionResponseError):
+        _detect(source, "OFFICIAL_LETTER_NUMBER", "ศย 0001/125")
+
+
 # Synthetic OCR page break splitting one address, as seen on a real page.
 _PAGE_BREAK = "\r\n\r\n----  ---|-- | Page 2 --|\r\n\r\n"
 _FIRST_PART = "บ้านเลขที่ 12/3 ถนนทดสอบ"

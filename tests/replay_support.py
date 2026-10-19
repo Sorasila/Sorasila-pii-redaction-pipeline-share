@@ -201,8 +201,12 @@ def captured_request_log():
         package_logger.removeHandler(handler)
 
 
-# attempt_seconds holds wall-clock times; replays compare everything else.
-_VOLATILE_LOG = re.compile(r"document_id=\S+ |seconds=[0-9.]+ |attempt_seconds=\S+ ")
+# attempt_seconds holds wall-clock times; repair_reasons (2026-10-19) is newer
+# than the recordings and is covered by tests/test_call_stats.py. Replays
+# compare everything else.
+_VOLATILE_LOG = re.compile(
+    r"document_id=\S+ |seconds=[0-9.]+ |attempt_seconds=\S+ |repair_reasons=\S+ "
+)
 
 
 def normalize_log(line: str) -> str:

@@ -76,6 +76,13 @@ def record_selection(kind: str, items) -> None:
         record(f"sel_{kind}_type:{pii_type}")
 
 
+def record_repair_reasons(codes) -> None:
+    """One in-window repair: the issue codes of the attempt it repairs, once each
+    (measurement for proposal C10, approved 2026-10-19)."""
+    for code in sorted(set(codes)):
+        record(f"repair_reason:{code}")
+
+
 def record_settled(count: int) -> None:
     for _ in range(count):
         record("sel_occurrence_settled")

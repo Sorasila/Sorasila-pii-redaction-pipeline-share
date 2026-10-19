@@ -67,7 +67,7 @@
    "manifest": "{\"document_id\":\"<document_id>\",\"entries\":[{\"occurrence_index\":1,\"original_value\":\"123 ตำบลทดสอบ\",\"pii_type\":\"ADDRESS\",\"placeholder\":\"[PII_ADDRESS_1]\",\"redacted_at\":\"<timestamp>\"}]}"
   },
   "log": [
-   "INFO redact status=200 llm_calls=4 by_role=detection:2,verification:2 http_attempts=4 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=4 recovery_calls=1 last_event=FINAL_VERIFIED residual=findings:ADDRESS;rules:no;candidates:1;types:ADDRESS_1;placeholder:0;land_prefix_trimmed:1;unmapped:0;issues:none selections=- reason=-"
+   "INFO redact status=200 llm_calls=4 by_role=detection:2,verification:2 http_attempts=4 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=4 recovery_calls=1 last_event=FINAL_VERIFIED residual=findings:ADDRESS;rules:no;candidates:1;types:ADDRESS_1;placeholder:0;placeholder_parts:0;land_prefix_trimmed:1;unmapped:0;issues:none selections=- reason=-"
   ]
  },
  "pipeline": {
@@ -149,6 +149,7 @@
      "ADDRESS": 1
     },
     "with_placeholder": 0,
+    "placeholder_parts": 0,
     "land_prefix_trimmed": 1,
     "unmapped": 0,
     "issue_codes": []

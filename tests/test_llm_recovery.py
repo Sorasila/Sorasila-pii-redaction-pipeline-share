@@ -455,7 +455,8 @@ async def test_repair_cannot_replace_a_placeholder_or_span_across_it():
             return verification(True)
         return candidates(("NAME", "Alice" if count == 1 else "[PII_NAME_1]"))
 
-    with pytest.raises(DetectionError, match="protected"):
+    # A placeholder alone is dropped (2026-10-19), so nothing changes.
+    with pytest.raises(VerificationError, match="no progress"):
         await run("Alice Bob", handler)
 
 
@@ -887,18 +888,64 @@ async def test_residual_address_starting_with_a_land_placeholder_keeps_the_locat
 
 
 @pytest.mark.asyncio
-async def test_residual_value_still_crossing_a_placeholder_fails_closed_with_its_shape():
+async def test_residual_value_around_a_placeholder_keeps_its_other_parts():
+    # Approved 2026-10-19: the label before the placeholder is dropped, the
+    # location after it is kept and the land-number join reunites them.
     rules, checker = land_rules()
     roles, events = [], []
     handler = residual_land_wire(roles, f"เลขที่ [PII_TITLE_DEED_NUMBER_1] {ONE_LEVEL}")
-    with pytest.raises(DetectionError, match="protected replacement"):
+    result = await run(
+        ONE_LEVEL_SOURCE, handler, rules=rules, checker=checker, events=events
+    )
+    assert result.redacted_markdown == LAND_REDACTED
+    assert roles == ["candidates", "has_pii", "candidates", "has_pii"]
+    (shape,) = [e for e in events if e["event"] == "RESIDUAL_CANDIDATES"]
+    assert shape["land_prefix_trimmed"] == 0
+    assert shape["with_placeholder"] == 1 and shape["placeholder_parts"] == 1
+    assert shape["unmapped"] == 0
+    assert ONE_LEVEL not in json.dumps(events, ensure_ascii=False)
+
+
+@pytest.mark.asyncio
+async def test_residual_value_of_placeholders_only_is_dropped_and_fails_closed():
+    rules, checker = land_rules()
+    roles, events = [], []
+    handler = residual_land_wire(roles, "เลขที่ [PII_TITLE_DEED_NUMBER_1]")
+    with pytest.raises(VerificationError, match="no progress"):
         await run(
             ONE_LEVEL_SOURCE, handler, rules=rules, checker=checker, events=events
         )
-    shape = events[-1]
-    assert shape["event"] == "RESIDUAL_CANDIDATES"
-    assert shape["land_prefix_trimmed"] == 0
-    assert shape["with_placeholder"] == 1 and shape["unmapped"] == 1
+    (shape,) = [e for e in events if e["event"] == "RESIDUAL_CANDIDATES"]
+    assert shape["with_placeholder"] == 1 and shape["placeholder_parts"] == 0
+    assert shape["unmapped"] == 0
+
+
+def test_placeholder_parts_keep_text_between_placeholders_only():
+    from pii_pipeline.recovery.residual import placeholder_parts
+
+    def parts(value, pii_type="ADDRESS", start=10):
+        match = PiiMatch(pii_type, value, start, start + len(value))
+        return [(p.value, p.start - start) for p in placeholder_parts(match)]
+
+    plain = PiiMatch("NAME", "นายทดสอบ", 0, 8)
+    assert placeholder_parts(plain) == [plain]
+    assert parts("[PII_NAME_1] บ้านเลขที่ 12 ตำบลทดสอบ") == [("บ้านเลขที่ 12 ตำบลทดสอบ", 13)]
+    assert parts("ตำบลทดสอบ [PII_ADDRESS_1], อำเภอสมมุติ") == [
+        ("ตำบลทดสอบ", 0),
+        ("อำเภอสมมุติ", 27),
+    ]
+    # Labels, titles, punctuation and short words are not values.
+    for value in (
+        "[PII_NAME_1]",
+        "นางสาว [PII_NAME_1]",
+        "[PII_NAME_1] และ [PII_NAME_2]",
+        "เลขที่ [PII_TITLE_DEED_NUMBER_1], 12",
+    ):
+        assert parts(value, "NAME") == []
+    for part in placeholder_parts(
+        PiiMatch("ADDRESS", "x [PII_NAME_1] ตำบลทดสอบ", 3, 26)
+    ):
+        assert part.end - part.start == len(part.value)
 
 
 def test_only_an_address_starting_with_a_land_placeholder_is_trimmed():

@@ -4,7 +4,7 @@
 
 1. the exact value;
 2. the value with whitespace ignored on both sides (4+ characters), or a near
-   copy of 20+ characters with a few OCR "repairs" (``locate_tolerant_value``);
+   copy of 10+ characters with a few OCR "repairs" (``locate_tolerant_value``);
 3. 2-4 exact parts of a value the model joined across an OCR page break
    (``locate_value_pieces``).
 
@@ -62,14 +62,23 @@ def _without_whitespace(source: str) -> tuple[list[int], str]:
 # Approved 2026-10-15: the last character may differ too; such a match is
 # extended to the end of its word (at most one edit budget of characters), so
 # a changed final letter can no longer leave the rest of the word visible.
+# Approved 2026-10-19: shorter values (10-19 characters) get a smaller budget,
+# one edit per 7 characters: models fix one or two OCR letters or tone marks in
+# short addresses and letter numbers (full run C10: every repair was
+# value_not_found, most of them 13-16 characters one or two edits away).
 _MIN_WHITESPACE_TOLERANT = 4
-_MIN_EDIT_TOLERANT = 20
+_MIN_EDIT_TOLERANT = 10
+_LONG_EDIT_TOLERANT = 20
 _CHARACTERS_PER_EDIT = 10
+_SHORT_CHARACTERS_PER_EDIT = 7
 _MIN_EDIT_BUDGET = 2
+_MIN_SHORT_EDIT_BUDGET = 1
 _EXACT_EDGE = 1
 
 
 def _edit_budget(target: str) -> int:
+    if len(target) < _LONG_EDIT_TOLERANT:
+        return max(_MIN_SHORT_EDIT_BUDGET, len(target) // _SHORT_CHARACTERS_PER_EDIT)
     return max(_MIN_EDIT_BUDGET, len(target) // _CHARACTERS_PER_EDIT)
 
 
@@ -157,7 +166,8 @@ def locate_tolerant_value(source: str, value: str) -> str | None:
 
     Whitespace is ignored on both sides. Failing that, a value of at least
     _MIN_EDIT_TOLERANT non-whitespace characters may differ by up to
-    max(2, length / 10) code-point edits, provided its first character matches
+    max(2, length / 10) code-point edits (20+ characters) or max(1, length / 7)
+    (10-19 characters), provided its first character matches
     exactly and exactly one source text is that close. When the last character
     differs, the text runs to the end of its word. The source text then goes
     through exact location.
