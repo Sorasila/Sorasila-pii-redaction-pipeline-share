@@ -43,6 +43,7 @@ from .delivery import (
     PreparedDelivery,
     prepare_delivery,
 )
+from .docs_login import DocsLogin
 from .document_input import (
     MAX_SOURCE_BYTES,
     MAX_SOURCE_CHARACTERS,
@@ -50,6 +51,9 @@ from .document_input import (
     read_document,
 )
 from .request_log import log_outcome, safe_reason
+
+# Docs login events only; request outcomes go to request_log.
+logger = logging.getLogger("pii_pipeline.service")
 
 __all__ = [
     "MAX_SOURCE_BYTES",
@@ -78,6 +82,43 @@ DOCS_PATHS = frozenset({"/docs", "/docs/oauth2-redirect", "/openapi.json"})
 # so the body, the Bearer token and the responses are declared here for the
 # docs page; they do not change how requests are checked.
 _SAMPLE_PAGE = "ผู้ฟ้องคดี นายสมมุติ ทดลองดี\nโทรศัพท์ 081-000-0000\n"
+_TOKEN_OPENAPI = {
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/x-www-form-urlencoded": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "grant_type": {"type": "string", "enum": ["password"]},
+                        "username": {"type": "string"},
+                        "password": {"type": "string", "format": "password"},
+                    },
+                    "required": ["grant_type", "username", "password"],
+                }
+            }
+        },
+    },
+    "responses": {
+        "200": {
+            "description": "A temporary Bearer token for POST /redact",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "access_token": {"type": "string"},
+                            "token_type": {"type": "string"},
+                            "expires_in": {"type": "integer"},
+                        },
+                    }
+                }
+            },
+        },
+        "400": {"description": "invalid_grant: wrong username or password"},
+    },
+}
+
 _REDACT_OPENAPI = {
     "requestBody": {
         "required": True,
@@ -405,19 +446,59 @@ def _add_error_handlers(app: FastAPI) -> None:
         return _error(400, "invalid_request")
 
 
-def _describe_security(app: FastAPI) -> None:
-    """Add the Bearer scheme and the error body to the generated schema."""
+async def _issue_docs_token(request: Request, login: DocsLogin) -> JSONResponse:
+    """OAuth2 password grant for the docs page; never logs the values."""
+    try:
+        form = await request.form()
+        grant = form.get("grant_type")
+        username = form.get("username")
+        password = form.get("password")
+    except Exception:  # noqa: BLE001 - malformed form bodies are a client error.
+        return _error(400, "invalid_request")
+    if (
+        grant != "password"
+        or not isinstance(username, str)
+        or not isinstance(password, str)
+    ):
+        return _error(400, "unsupported_grant_type")
+    if not login.check(username, password):
+        logger.warning("docs login failed")
+        # Slows guessing; the docs page is for test and staging machines only.
+        await asyncio.sleep(1)
+        return _error(400, "invalid_grant")
+    return JSONResponse(
+        {
+            "access_token": login.issue(),
+            "token_type": "bearer",
+            "expires_in": login.ttl_seconds,
+        },
+        headers=_PRIVATE_RESPONSE_HEADERS,
+    )
+
+
+def _describe_security(app: FastAPI, *, login: bool) -> None:
+    """Add the Bearer scheme(s) and the error body to the generated schema."""
     build = app.openapi
 
     def openapi() -> dict:
         if app.openapi_schema is None:
             schema = build()
             components = schema.setdefault("components", {})
-            components.setdefault("securitySchemes", {})["bearerAuth"] = {
+            schemes = components.setdefault("securitySchemes", {})
+            schemes["bearerAuth"] = {
                 "type": "http",
                 "scheme": "bearer",
                 "description": "PII_SERVICE_API_TOKEN",
             }
+            if login:
+                # Swagger's Authorize dialog shows username/password fields,
+                # calls /token and sends the token it gets as Bearer.
+                schemes["docsLogin"] = {
+                    "type": "oauth2",
+                    "description": "Username and password set in "
+                    "PII_SERVICE_DOCS_USERNAME / PII_SERVICE_DOCS_PASSWORD",
+                    "flows": {"password": {"tokenUrl": "token", "scopes": {}}},
+                }
             components.setdefault("schemas", {})["Error"] = {
                 "type": "object",
                 "properties": {
@@ -445,6 +526,7 @@ def create_app(
     return_manifest: bool = True,
     return_metadata: bool = True,
     enable_docs: bool = False,
+    docs_login: DocsLogin | None = None,
 ) -> FastAPI:
     """Create an adapter with required trusted dependencies and a finite deadline.
 
@@ -461,7 +543,12 @@ def create_app(
     (``text/markdown``). Every success carries the ``X-Document-Id`` header.
     ``enable_docs`` serves Swagger UI at /docs and the schema at /openapi.json
     (no token needed to open them; trying /redact still needs one).
+    ``docs_login`` (only with ``enable_docs``) adds POST /token: a username and
+    password give a temporary Bearer token, used from Swagger's Authorize
+    dialog; ``authenticate`` must accept those tokens.
     """
+    if docs_login is not None and not enable_docs:
+        raise HttpApiConfigurationError("HTTP API configuration is invalid")
     deps = _Dependencies(
         processor,
         policy,
@@ -481,9 +568,10 @@ def create_app(
         title="PII Redaction Service",
         version="1.0",
         description=(
-            "Redacts PII in Thai OCR Markdown. Click **Authorize** and enter the "
-            "caller token (PII_SERVICE_API_TOKEN), then try POST /redact with a "
-            "synthetic page. A request can take minutes while the LLM works. "
+            "Redacts PII in Thai OCR Markdown. Click **Authorize** and either "
+            "log in with the docs username and password (when enabled) or enter "
+            "the caller token (PII_SERVICE_API_TOKEN), then try POST /redact with "
+            "a synthetic page. A request can take minutes while the LLM works. "
             "Never paste real documents into a shared page."
         ),
         docs_url="/docs" if enable_docs else None,
@@ -500,13 +588,27 @@ def create_app(
         "/redact",
         response_class=Response,
         summary="Redact PII in one page",
-        openapi_extra=_REDACT_OPENAPI,
+        openapi_extra=(
+            {**_REDACT_OPENAPI, "security": [{"bearerAuth": []}, {"docsLogin": []}]}
+            if docs_login
+            else _REDACT_OPENAPI
+        ),
     )
     async def redact_document(request: Request) -> Response:
         return await _redact(request, deps)
 
+    if docs_login is not None:
+
+        @app.post(
+            "/token",
+            summary="Get a temporary token (docs login)",
+            openapi_extra=_TOKEN_OPENAPI,
+        )
+        async def docs_token(request: Request) -> JSONResponse:
+            return await _issue_docs_token(request, docs_login)
+
     if enable_docs:
-        _describe_security(app)
+        _describe_security(app, login=docs_login is not None)
 
     @app.get("/healthz")
     async def liveness() -> JSONResponse:

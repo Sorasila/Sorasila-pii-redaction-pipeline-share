@@ -92,6 +92,9 @@ def test_settings_defaults_and_env_prefixes_are_frozen():
         "return_manifest": False,
         "return_metadata": False,
         "enable_docs": False,
+        "docs_username": None,
+        "docs_password": None,
+        "docs_token_ttl_seconds": 3600,
     }
     assert LlmProxySettings.model_config["env_prefix"] == "LLM_PROXY_"
     assert ServiceSettings.model_config["env_prefix"] == "PII_SERVICE_"

@@ -10,7 +10,7 @@ Service รับข้อความ Markdown ภาษาไทยที่�
 [การทำงานและขอบเขต PII](docs/OVERVIEW.md) ·
 [รันบนเครื่องโดยไม่ใช้ Docker](docs/SETUP_AND_USAGE.md)
 
-> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1296, harness 79) และทดสอบกับ LLM
+> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1303, harness 79) และทดสอบกับ LLM
 > เครื่องทดสอบแล้ว **Dockerfile และตัวอย่าง Compose/Kubernetes ด้านล่างเป็นตัวอย่างอ้างอิง
 > ยังไม่ได้ทดสอบบนแพลตฟอร์มจริง** ปรับตามกติกาของแพลตฟอร์มได้
 
@@ -92,6 +92,8 @@ Service อ่านค่าจาก environment ของ container ถ้า
 | `LLM_PROXY_CONNECT_TIMEOUT_SECONDS`, `..._WRITE_...`, `..._POOL_...` | `10`, `30`, `10` | timeout ย่อยต่อครั้ง |
 | `PII_SERVICE_RETURN_METADATA` | `false` | `true` = ตอบ multipart `redacted_md` + `metadata` แทนข้อความล้วน |
 | `PII_SERVICE_ENABLE_DOCS` | `false` | `true` = เปิดหน้า Swagger ที่ `/docs` ให้ลองเรียก API (ข้อ 6.1) แนะนำเฉพาะเครื่องทดสอบ/staging |
+| `PII_SERVICE_DOCS_USERNAME`, `PII_SERVICE_DOCS_PASSWORD` | ไม่ตั้ง | **ค่าลับ (รหัสผ่าน)** ล็อกอินในหน้า Swagger เพื่อรับ token ชั่วคราว ต้องตั้งคู่กัน รหัสผ่านอย่างน้อย 12 ตัว ใช้ได้เฉพาะเมื่อเปิด docs (ข้อ 6.1) |
+| `PII_SERVICE_DOCS_TOKEN_TTL_SECONDS` | `3600` | อายุของ token ที่ได้จากการล็อกอิน (สูงสุด 86400) |
 | `UVICORN_ROOT_PATH` | ไม่ตั้ง | path นำหน้าเมื่อเรียกผ่าน gateway เช่น `/pii` (ข้อ 6.2) |
 
 ### 3.3 ตัวอย่างไฟล์ค่าตั้ง (ค่าปลอม)
@@ -123,6 +125,7 @@ PII_SERVICE_REQUEST_DEADLINE_SECONDS=1200
 | --- | --- |
 | `PII_SERVICE_RETURN_MANIFEST` | ส่งค่า PII จริงกลับไปใน response ต้องรอการออกแบบการเข้ารหัสและการอนุญาตด้านข้อมูลก่อน |
 | `PII_SERVICE_ALLOW_UNENCRYPTED_TEST_MANIFEST` | โหมดทดสอบที่ manifest **ไม่เข้ารหัส** ใช้กับเครื่องทดสอบเท่านั้น |
+| `PII_SERVICE_ENABLE_DOCS`, `PII_SERVICE_DOCS_USERNAME`, `PII_SERVICE_DOCS_PASSWORD` | หน้า Swagger และการล็อกอิน มีไว้ให้ลองบนเครื่องทดสอบ/staging |
 | `PII_STORE_URL`, `PII_STORE_TOKEN` | ที่เก็บ manifest เตรียมไว้สำหรับอนาคต production ตั้งใจไม่เก็บ PII |
 | `LLM_PROXY_MODEL` | รับได้ค่าเดียวคือ `qwen/qwen3.6-27b` (ค่าเริ่มต้น) |
 
@@ -221,11 +224,15 @@ body: ข้อความ UTF-8 ดิบ ไม่เกิน 2000 ตัว
 
 ตั้ง `PII_SERVICE_ENABLE_DOCS=true` แล้วเปิด `http://<host>:8080/docs` ในเบราว์เซอร์
 
-1. กด **Authorize** ใส่ค่า `PII_SERVICE_API_TOKEN` (ไม่ต้องพิมพ์คำว่า `Bearer`)
+1. กด **Authorize** แล้วเลือกทางใดทางหนึ่ง
+   - **ล็อกอิน (ถ้าเปิดไว้):** ส่วน *docsLogin* กรอก `username` และ `password` (ค่าที่ตั้งใน `PII_SERVICE_DOCS_USERNAME` / `PII_SERVICE_DOCS_PASSWORD`) ช่อง client_id/client_secret เว้นว่าง แล้วกด **Authorize** หน้าเว็บจะขอ token ชั่วคราวจาก `POST /token` แล้วใช้ให้เองจนหมดอายุ (ค่าเริ่ม 1 ชั่วโมง; หมดแล้วกด Logout แล้วล็อกอินใหม่)
+   - **ใส่ token เอง:** ส่วน *bearerAuth* ใส่ค่า `PII_SERVICE_API_TOKEN` (ไม่ต้องพิมพ์คำว่า `Bearer`)
 2. เปิด `POST /redact` กด **Try it out** แก้ข้อความในช่อง body (มีตัวอย่างสังเคราะห์ให้) แล้วกด **Execute**
 3. รอผล (หลายนาทีบนเครื่อง LLM ทดสอบ) ผลอยู่ที่ช่อง *Server response* พร้อม header `x-document-id`
 
 - เปิดหน้า `/docs` และ `/openapi.json` ได้โดยไม่ต้องใช้ token แต่การเรียก `/redact` จากหน้านี้ยังต้องใช้ token เสมอ
+- **การล็อกอิน (`POST /token`)** เปิดเมื่อตั้ง `PII_SERVICE_ENABLE_DOCS=true` **และ** ตั้งทั้ง `PII_SERVICE_DOCS_USERNAME` กับ `PII_SERVICE_DOCS_PASSWORD` (ยาวอย่างน้อย 12 ตัว) token ที่ได้เป็นของชั่วคราว ไม่ใช่ `PII_SERVICE_API_TOKEN` ตัวจริง และใช้ไม่ได้ทันทีถ้าเปลี่ยน `PII_SERVICE_API_TOKEN`; ล็อกอินผิดได้ `400 invalid_grant` (รอ 1 วินาทีต่อครั้ง กันการเดารหัส) และ log ขึ้น `docs login failed` โดยไม่บันทึก username/password
+- ไม่มีระบบล็อกบัญชีเมื่อเดารหัสผิดหลายครั้ง ให้ใช้รหัสผ่านยาวและเปิดเฉพาะเครื่องทดสอบ/staging ที่จำกัดเครือข่าย
 - หน้า Swagger โหลดไฟล์หน้าเว็บจาก `cdn.jsdelivr.net` เบราว์เซอร์ที่เปิดต้องออกอินเทอร์เน็ตได้ (ตัว service ไม่ต้อง)
 - **ใช้ข้อความสังเคราะห์เท่านั้น** เอกสารจริงที่วางในหน้านี้จะผ่านเบราว์เซอร์และอาจถูกบันทึกในประวัติของเครื่อง
 - ค่าเริ่มต้นปิด เพื่อไม่ให้ production เปิดหน้า docs โดยไม่ตั้งใจ
@@ -287,6 +294,9 @@ INFO redact document_id=… status=200 seconds=188.8 llm_calls=2 by_role=detecti
 | เรียกจากนอก container ไม่ได้ | service ต้องฟังที่ `0.0.0.0` (ค่าใน Dockerfile) ไม่ใช่ `127.0.0.1` |
 | `/readyz` ตอบ 503 | กำลังเริ่มหรือกำลังปิด รอสักครู่ |
 | `/docs` ได้ `{"error":"not_found"}` | ยังไม่ได้ตั้ง `PII_SERVICE_ENABLE_DOCS=true` |
+| Authorize แบบล็อกอินขึ้น error / `invalid_grant` | username หรือ password ไม่ตรงกับ `PII_SERVICE_DOCS_USERNAME` / `PII_SERVICE_DOCS_PASSWORD` |
+| ไม่มีส่วน *docsLogin* ในหน้า Authorize | ยังไม่ได้ตั้ง username/password คู่กัน หรือไม่ได้เปิด docs (log ตอนเริ่มบอกสถานะการล็อกอิน) |
+| ล็อกอินแล้วใช้ได้สักพักกลายเป็น 401 | token ชั่วคราวหมดอายุ กด Logout แล้วล็อกอินใหม่ |
 | หน้า `/docs` ขาวเปล่า | เบราว์เซอร์โหลดไฟล์จาก `cdn.jsdelivr.net` ไม่ได้ (เครือข่ายปิดอินเทอร์เน็ต) |
 | ทุก request ได้ 401 | token ใน header ไม่ตรงกับ `PII_SERVICE_API_TOKEN` |
 | 502 และ `reason` มี `LlmProxyTransportError` | ต่อ proxy ไม่ได้ (network, URL, certificate) |

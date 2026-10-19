@@ -30,6 +30,7 @@ from ..llm.processing import LlmDocumentProcessor
 from ..llm.windows import TextWindow, make_text_window
 from ..recovery.process import RecoveryPolicy
 from ..rules.thai import detect_thai_rule_pii
+from .docs_login import DocsLogin
 from .http import Authenticator, create_app
 from .manifest_store import ManifestStoreSettings, PostgrestManifestStore, is_local_url
 
@@ -69,6 +70,11 @@ class ServiceSettings(BaseSettings):
     return_metadata: bool = False
     # Swagger UI at /docs for trying the API (test and staging machines).
     enable_docs: bool = False
+    # Optional login on the docs page: POST /token turns these into a
+    # temporary Bearer token (only with enable_docs; both or neither).
+    docs_username: str | None = Field(default=None, min_length=1)
+    docs_password: SecretStr | None = Field(default=None, min_length=12)
+    docs_token_ttl_seconds: int = Field(default=3600, gt=0, le=86_400)
 
     @field_validator("api_token")
     @classmethod
@@ -107,12 +113,22 @@ def unencrypted_test_manifest_envelope(
     ).encode()
 
 
-def bearer_authenticator(token: SecretStr) -> Authenticator:
+def bearer_authenticator(
+    token: SecretStr, docs_login: DocsLogin | None = None
+) -> Authenticator:
+    """The API token, or a temporary docs-login token when that login is on."""
     expected = f"Bearer {token.get_secret_value()}".encode()
 
     async def authenticate(request: Request) -> bool:
-        supplied = request.headers.get("authorization", "").encode("utf-8", "replace")
-        return hmac.compare_digest(supplied, expected)
+        header = request.headers.get("authorization", "")
+        if hmac.compare_digest(header.encode("utf-8", "replace"), expected):
+            return True
+        scheme, _, value = header.partition(" ")
+        return (
+            docs_login is not None
+            and scheme.lower() == "bearer"
+            and docs_login.valid(value.strip())
+        )
 
     return authenticate
 
@@ -130,6 +146,23 @@ def _enable_request_log() -> None:
 def _whole(text: str) -> list[TextWindow]:
     # A request is at most one page, so one window covers it.
     return [make_text_window(text, 0, len(text))]
+
+
+def _docs_login(settings: ServiceSettings) -> DocsLogin | None:
+    user, password = settings.docs_username, settings.docs_password
+    if (user is None) != (password is None):
+        raise ServiceConfigurationError(
+            "Set both PII_SERVICE_DOCS_USERNAME and PII_SERVICE_DOCS_PASSWORD, or neither"
+        )
+    if user is None or password is None:
+        return None
+    if not settings.enable_docs:
+        logger.warning("Docs login is off because PII_SERVICE_ENABLE_DOCS is not set")
+        return None
+    logger.warning("Docs login is on: POST /token issues temporary tokens")
+    return DocsLogin(
+        user, password, settings.api_token, ttl_seconds=settings.docs_token_ttl_seconds
+    )
 
 
 def create_service_app(
@@ -179,6 +212,7 @@ def create_service_app(
             store_settings.url, store_settings.token, transport=store_transport
         )
         logger.warning("PII manifests are stored at the local manifest store")
+    docs_login = _docs_login(settings)
     llm_settings = llm_settings or LlmProxySettings()
     client = LlmProxyClient(llm_settings, transport=llm_transport)
     processor = LlmDocumentProcessor(client, _whole, _whole)
@@ -189,12 +223,13 @@ def create_service_app(
         rule_detectors=rules,
         rules_has_pii=make_detection_checker(list(rules)),
         encrypt_manifest=encryptor,
-        authenticate=bearer_authenticator(settings.api_token),
+        authenticate=bearer_authenticator(settings.api_token, docs_login),
         request_deadline_seconds=settings.request_deadline_seconds,
         store_manifest=store.put if store else None,
         return_manifest=settings.return_manifest,
         return_metadata=settings.return_metadata or settings.return_manifest,
         enable_docs=settings.enable_docs,
+        docs_login=docs_login,
     )
 
     @asynccontextmanager
