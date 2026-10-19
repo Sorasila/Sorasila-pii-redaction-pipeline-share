@@ -92,6 +92,7 @@ Service อ่านค่าจาก environment ของ container ถ้า
 | `LLM_PROXY_CONNECT_TIMEOUT_SECONDS`, `..._WRITE_...`, `..._POOL_...` | `10`, `30`, `10` | timeout ย่อยต่อครั้ง |
 | `PII_SERVICE_RETURN_METADATA` | `false` | `true` = ตอบ multipart `redacted_md` + `metadata` แทนข้อความล้วน |
 | `PII_SERVICE_ENABLE_DOCS` | `false` | `true` = เปิดหน้า Swagger ที่ `/docs` ให้ลองเรียก API (ข้อ 6.1) แนะนำเฉพาะเครื่องทดสอบ/staging |
+| `UVICORN_ROOT_PATH` | ไม่ตั้ง | path นำหน้าเมื่อเรียกผ่าน gateway เช่น `/pii` (ข้อ 6.2) |
 
 ### 3.3 ตัวอย่างไฟล์ค่าตั้ง (ค่าปลอม)
 
@@ -228,6 +229,31 @@ body: ข้อความ UTF-8 ดิบ ไม่เกิน 2000 ตัว
 - หน้า Swagger โหลดไฟล์หน้าเว็บจาก `cdn.jsdelivr.net` เบราว์เซอร์ที่เปิดต้องออกอินเทอร์เน็ตได้ (ตัว service ไม่ต้อง)
 - **ใช้ข้อความสังเคราะห์เท่านั้น** เอกสารจริงที่วางในหน้านี้จะผ่านเบราว์เซอร์และอาจถูกบันทึกในประวัติของเครื่อง
 - ค่าเริ่มต้นปิด เพื่อไม่ให้ production เปิดหน้า docs โดยไม่ตั้งใจ
+
+### 6.2 Swagger ใน Docker
+
+ไม่ต้องแก้โค้ดหรือ Dockerfile ตั้งค่าผ่าน environment ของ container เหมือนค่าอื่น
+
+```bash
+docker run --rm -p 8080:8080 --env-file /srv/pii-redaction/service.env -e PII_SERVICE_ENABLE_DOCS=true pii-redaction-service
+```
+
+แล้วเปิด `http://<เครื่องที่รัน container>:8080/docs` ปุ่ม Execute ยิงไปที่ host และพอร์ตเดียวกับหน้าเว็บเอง
+
+| สถานการณ์ | ต้องทำ |
+| --- | --- |
+| เครื่องทดสอบหรือ staging | ตั้ง `PII_SERVICE_ENABLE_DOCS=true` (Compose: `environment:` หรือ `env_file`; Kubernetes: ConfigMap) |
+| production | ไม่ต้องตั้ง (ค่าเริ่มต้นปิด) |
+| เรียกผ่าน gateway ที่มี **path นำหน้า** เช่น `https://gateway.example/pii/docs` | ตั้ง `UVICORN_ROOT_PATH=/pii` ให้ container แล้วให้ gateway ตัด `/pii` ออกก่อนส่งต่อ หน้า Swagger จะโหลด `/pii/openapi.json` และ Execute จะยิงไป `/pii/redact` (ถ้าไม่ตั้ง หน้าจะหา schema ไม่เจอ) |
+| เรียกตรงที่ container หรือ path ไม่มีตัวนำหน้า | ไม่ต้องตั้งอะไรเพิ่ม |
+| gateway มี timeout สั้นกว่าเวลาประมวลผล | Execute จะได้ 504 หรือ error จาก gateway เหมือนระบบหลัก (ข้อ 5) |
+| gateway ตรวจ authentication เองหรือแก้ header | ต้องให้ header `Authorization: Bearer ...` จาก Swagger ผ่านไปถึง service |
+| เบราว์เซอร์ของผู้ใช้ออกอินเทอร์เน็ตไม่ได้ | หน้า `/docs` ขาวเปล่า เพราะไฟล์หน้าเว็บของ Swagger โหลดจาก `cdn.jsdelivr.net` (container ไม่ต้องออกเน็ต) |
+
+- token ที่ใส่ใน **Authorize** คือ `PII_SERVICE_API_TOKEN` ของ container นั้น ขอจากผู้ดูแลระบบ
+- `/docs` และ `/openapi.json` เปิดดูได้โดยไม่ต้องใช้ token (เห็นแค่รูปแบบ API) ถ้า staging เข้าถึงได้จากวงกว้าง ควรจำกัดเครือข่ายที่เข้า `/docs` ได้
+- Execute ที่ `POST /redact` **เรียก LLM จริง** ใช้เวลาหลายนาที และใช้เครื่อง LLM ร่วมกับผู้ใช้อื่น ใช้ข้อความสังเคราะห์เท่านั้น
+- ข้อผิดพลาดที่ตอบทันทีโดยไม่เรียก LLM: token ผิด (401), body ว่าง (400), ยาวเกิน 2000 ตัวอักษร (413)
 
 ---
 
