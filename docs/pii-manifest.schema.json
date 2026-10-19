@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pii-redaction-pipeline/pii-manifest.schema.json",
+  "title": "pii_manifest (plaintext before encryption)",
+  "description": "Decrypted content of the pii_manifest multipart part. Contains real PII in original_value: never log, index or place it in URLs. One entry per redacted occurrence, in document order. Rules the code also enforces but JSON Schema cannot express: entries follow the placeholder order in redacted_md; occurrence_index counts 1, 2, 3... per pii_type; original_value is not whitespace-only and is NFC-normalized.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["document_id", "entries"],
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Server-generated per request; equals metadata.document_id."
+    },
+    "entries": {
+      "type": "array",
+      "description": "Empty when the document has no PII; the manifest is still delivered.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "placeholder",
+          "pii_type",
+          "occurrence_index",
+          "original_value",
+          "redacted_at"
+        ],
+        "properties": {
+          "placeholder": {
+            "type": "string",
+            "pattern": "^\\[PII_[A-Z][A-Z0-9_]*_[1-9][0-9]*\\]$",
+            "description": "Equals [PII_{pii_type}_{occurrence_index}] and appears once in redacted_md. Unique only within one document_id."
+          },
+          "pii_type": {
+            "type": "string",
+            "enum": [
+              "NAME",
+              "ORGANIZATION",
+              "ID_NUMBER",
+              "PASSPORT_NUMBER",
+              "EMAIL",
+              "PHONE",
+              "FAX",
+              "ADDRESS",
+              "BANK_ACCOUNT_NUMBER",
+              "PAYMENT_CARD_NUMBER",
+              "VEHICLE_REGISTRATION",
+              "DATE_OF_BIRTH",
+              "SOCIAL_MEDIA_IDENTIFIER",
+              "LAND_PARCEL_NUMBER",
+              "CASE_NUMBER",
+              "TITLE_DEED_NUMBER",
+              "OFFICIAL_LETTER_NUMBER"
+            ]
+          },
+          "occurrence_index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "original_value": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact source text (NFC) that the placeholder replaced. Sensitive."
+          },
+          "redacted_at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "Z$",
+            "description": "UTC RFC 3339; equals metadata.created_at. Fractional seconds appear only when non-zero."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# Extra packages for the pdf-core-test harness (install into the repo .venv):
+#   .venv\Scripts\python.exe -m pip install -r tools/pdf-core-test/requirements.txt
+# Versions are fixed in the repository's constraints.txt.
+-c ../../constraints.txt
+pypdf
+# Optional second extractor (--extractor pdfplumber)
+pdfplumber
+# Harness tests only
+reportlab
+Pillow

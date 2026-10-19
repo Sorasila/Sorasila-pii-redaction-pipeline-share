@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pii-redaction-pipeline/metadata.schema.json",
+  "title": "metadata",
+  "description": "Content of the metadata multipart part. Contains no PII values. Its exact bytes are the additional authenticated data of the encrypted pii_manifest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "document_id",
+    "delivery_id",
+    "detector_version",
+    "redacted_md_sha256",
+    "created_at"
+  ],
+  "properties": {
+    "document_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Equals pii_manifest.document_id; joins the three parts."
+    },
+    "delivery_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Package identifier; not a request-idempotency key."
+    },
+    "detector_version": {
+      "type": "string",
+      "pattern": "^pii-detection-v[1-9][0-9]*$",
+      "description": "Detection prompt version that produced the package."
+    },
+    "redacted_md_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 hex of the exact UTF-8 bytes of the redacted_md part."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$",
+      "description": "UTC RFC 3339; equals every manifest entry redacted_at."
+    }
+  }
+}

@@ -1,0 +1,7 @@
+# Real documents and prepared cases never enter the repository. Work
+# directories must stay outside Git (the harness also refuses them).
+inputs/
+cases/
+*.pdf
+*.log
+.env

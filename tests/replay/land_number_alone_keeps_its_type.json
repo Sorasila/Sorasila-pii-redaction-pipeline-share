@@ -1,0 +1,112 @@
+{
+ "scenario": "land_number_alone_keeps_its_type",
+ "source": "โฉนดเลขที่ 4567\n\nผู้ร้องอยู่ ตำบลทดสอบ อำเภอสมมุติ จังหวัดตัวอย่าง",
+ "calls": [
+  {
+   "role": "candidates",
+   "body_sha256": "258c845558782642a4a3c39cef60dc290ad47536a23319840b8046d49f346529",
+   "context_sha256": "12ec779cedb043180ce525949a4ad133756ffa5ab3eeb5d0aa0f2f404ee2db67",
+   "prompt_sha256": "ef494cde4203a6da4107a9c56d186d4a485d2f0525b1d19a18d8145ca88ca1b6",
+   "schema_sha256": "bd62e3789692dbbaa158079f8434c9a1d712beca23774a026a4894b5ff5bc8f5",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[{\"pii_type\":\"ADDRESS\",\"value\":\"ตำบลทดสอบ อำเภอสมมุติ จังหวัดตัวอย่าง\"}]}}"
+  },
+  {
+   "role": "has_pii",
+   "body_sha256": "584e198aa06d4ed7682e223763d6ef92f171bf5ea352656256633916c1ff21b3",
+   "context_sha256": "bb9aef7c21c438f71d52c85eac31ac68e860f8e5c09c7ff8e025b60cc68ade4a",
+   "prompt_sha256": "5b8da0110d9c15d8345366e5fba793c5ea54a3cb83d406952136ed638336a825",
+   "schema_sha256": "527b933a612b790483cf71a8caa2368246616365f723c8d45b3ee0e2a8bcdd72",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"has_pii\":false,\"findings\":[]}}"
+  }
+ ],
+ "service": {
+  "response": {
+   "status": 200,
+   "content_type": "multipart/form-data",
+   "part_names": [
+    "redacted_md",
+    "pii_manifest",
+    "metadata"
+   ],
+   "redacted_md": "โฉนดเลขที่ [PII_TITLE_DEED_NUMBER_1]\n\nผู้ร้องอยู่ [PII_ADDRESS_1]",
+   "metadata": "{\"created_at\":\"<timestamp>\",\"delivery_id\":\"<delivery_id>\",\"detector_version\":\"pii-detection-v18\",\"document_id\":\"<document_id>\",\"redacted_md_sha256\":\"bb9aef7c21c438f71d52c85eac31ac68e860f8e5c09c7ff8e025b60cc68ade4a\"}",
+   "envelope_keys": [
+    "protected",
+    "encrypted_key",
+    "iv",
+    "ciphertext",
+    "tag",
+    "aad"
+   ],
+   "envelope_protected": "{\"alg\": \"RSA-OAEP-256\", \"enc\": \"A256GCM\", \"kid\": \"UNENCRYPTED-TEST-ONLY\", \"cty\": \"application/json\"}",
+   "envelope_aad_is_metadata": true,
+   "manifest": "{\"document_id\":\"<document_id>\",\"entries\":[{\"occurrence_index\":1,\"original_value\":\"4567\",\"pii_type\":\"TITLE_DEED_NUMBER\",\"placeholder\":\"[PII_TITLE_DEED_NUMBER_1]\",\"redacted_at\":\"<timestamp>\"},{\"occurrence_index\":1,\"original_value\":\"ตำบลทดสอบ อำเภอสมมุติ จังหวัดตัวอย่าง\",\"pii_type\":\"ADDRESS\",\"placeholder\":\"[PII_ADDRESS_1]\",\"redacted_at\":\"<timestamp>\"}]}"
+  },
+  "log": [
+   "INFO redact status=200 llm_calls=2 by_role=detection:1,verification:1 http_attempts=2 repairs=0 blank_resends=- verification_retries=0 residual_rounds=0 merge_selections=0 role_calls=2 recovery_calls=0 last_event=FINAL_VERIFIED residual=- selections=- reason=-"
+  ]
+ },
+ "pipeline": {
+  "redacted_md": "โฉนดเลขที่ [PII_TITLE_DEED_NUMBER_1]\n\nผู้ร้องอยู่ [PII_ADDRESS_1]",
+  "entries": [
+   [
+    "[PII_TITLE_DEED_NUMBER_1]",
+    "TITLE_DEED_NUMBER",
+    1,
+    "4567"
+   ],
+   [
+    "[PII_ADDRESS_1]",
+    "ADDRESS",
+    1,
+    "ตำบลทดสอบ อำเภอสมมุติ จังหวัดตัวอย่าง"
+   ]
+  ],
+  "events": [
+   {
+    "event": "RECOVERY_STARTED",
+    "role_calls": 0,
+    "recovery_calls": 0,
+    "detection_windows": 1,
+    "max_recovery_calls": 4,
+    "reserved_recovery_calls": 0
+   },
+   {
+    "event": "DETECTION_WINDOW_STARTED",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1,
+    "recovery": false
+   },
+   {
+    "event": "DETECTION_WINDOW_OUTCOME",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "issue_count": 0,
+    "valid_matches": 1,
+    "recovery": false,
+    "window_number": 1
+   },
+   {
+    "event": "VERIFICATION_WINDOW_STARTED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1
+   },
+   {
+    "event": "FINAL_VERIFIED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "residual_rounds": 0,
+    "preliminary_issue_windows": 0,
+    "conflict_selection_calls": 0
+   }
+  ]
+ }
+}

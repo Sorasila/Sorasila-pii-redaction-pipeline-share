@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+*.log
+
+# Local reference notebook contains credentials and PII-bearing saved outputs.
+demo_structured_output_to_db.ipynb

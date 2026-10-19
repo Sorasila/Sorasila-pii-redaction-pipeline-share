@@ -1,0 +1,37 @@
+# Local PII manifest store: Postgres + PostgREST, reachable from this machine only.
+# Start from this folder:  docker compose --env-file ../../.env up -d
+name: pii-local-store
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pii
+      POSTGRES_USER: pii_admin
+      POSTGRES_PASSWORD: ${PII_DB_ADMIN_PASSWORD:?set PII_DB_ADMIN_PASSWORD in .env}
+      PII_DB_AUTHENTICATOR_PASSWORD: ${PII_DB_AUTHENTICATOR_PASSWORD:?set PII_DB_AUTHENTICATOR_PASSWORD in .env}
+    volumes:
+      - pii_store_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pii_admin -d pii"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    image: postgrest/postgrest:v12.2.3
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://authenticator:${PII_DB_AUTHENTICATOR_PASSWORD}@db:5432/pii
+      PGRST_DB_SCHEMAS: api
+      PGRST_JWT_SECRET: ${PII_DB_JWT_SECRET:?set PII_DB_JWT_SECRET in .env}
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pii_store_data:

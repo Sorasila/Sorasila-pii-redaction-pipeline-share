@@ -1,0 +1,126 @@
+{
+ "scenario": "residual_value_crossing_placeholder_fails_closed",
+ "source": "ที่ดินตาม น.ส. 3 ก. เลขที่ 123 ตำบลทดสอบ ต่อมา",
+ "calls": [
+  {
+   "role": "candidates",
+   "body_sha256": "49cf3f5aa9877bb92fe2bf3fb057385d3158926f38de676339ba4fd48ef7ab26",
+   "context_sha256": "a7ad046be60b5b83908269424b6a047aeb289dcbc252a776b823a81cba8d1160",
+   "prompt_sha256": "ef494cde4203a6da4107a9c56d186d4a485d2f0525b1d19a18d8145ca88ca1b6",
+   "schema_sha256": "bd62e3789692dbbaa158079f8434c9a1d712beca23774a026a4894b5ff5bc8f5",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[]}}"
+  },
+  {
+   "role": "has_pii",
+   "body_sha256": "b316e03ed3bda57163e8a5988fd22d76f3934b4a00647f6faf03dcbd4523904a",
+   "context_sha256": "0288d387d6f80a723e6b9db00df5b6bebdeb2cb273f8e2144f84c0053430f03e",
+   "prompt_sha256": "5b8da0110d9c15d8345366e5fba793c5ea54a3cb83d406952136ed638336a825",
+   "schema_sha256": "527b933a612b790483cf71a8caa2368246616365f723c8d45b3ee0e2a8bcdd72",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"has_pii\":true,\"findings\":[{\"pii_type\":\"ADDRESS\"}]}}"
+  },
+  {
+   "role": "candidates",
+   "body_sha256": "3e93e0b66f684af56ab20794b73009200a5c0289825ed3546da86d53c27bf1da",
+   "context_sha256": "0288d387d6f80a723e6b9db00df5b6bebdeb2cb273f8e2144f84c0053430f03e",
+   "prompt_sha256": "52f43a8dec6aa96a0f8ee6368ccc6ab509ae92e67a14b0a0045af4e3c23d9380",
+   "schema_sha256": "bd62e3789692dbbaa158079f8434c9a1d712beca23774a026a4894b5ff5bc8f5",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[{\"pii_type\":\"ADDRESS\",\"value\":\"เลขที่ [PII_TITLE_DEED_NUMBER_1] ตำบลทดสอบ\"}]}}"
+  }
+ ],
+ "service": {
+  "response": {
+   "status": 502,
+   "content_type": "application/json",
+   "json": {
+    "error": "processing_failed",
+    "document_id": "<document_id>"
+   }
+  },
+  "log": [
+   "WARNING redact status=502 llm_calls=3 by_role=detection:2,verification:1 http_attempts=3 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=3 recovery_calls=1 last_event=RESIDUAL_CANDIDATES residual=findings:ADDRESS;rules:no;candidates:1;types:ADDRESS_1;placeholder:1;land_prefix_trimmed:0;unmapped:1;issues:none selections=- reason=DetectionError(\"Recovery match crosses a protected replacement\")"
+  ]
+ },
+ "pipeline": {
+  "error": "DetectionError: Recovery match crosses a protected replacement",
+  "events": [
+   {
+    "event": "RECOVERY_STARTED",
+    "role_calls": 0,
+    "recovery_calls": 0,
+    "detection_windows": 1,
+    "max_recovery_calls": 4,
+    "reserved_recovery_calls": 0
+   },
+   {
+    "event": "DETECTION_WINDOW_STARTED",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1,
+    "recovery": false
+   },
+   {
+    "event": "DETECTION_WINDOW_OUTCOME",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "issue_count": 0,
+    "valid_matches": 0,
+    "recovery": false,
+    "window_number": 1
+   },
+   {
+    "event": "VERIFICATION_WINDOW_STARTED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1
+   },
+   {
+    "event": "RESIDUAL_RECOVERY_STARTED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "round_number": 1,
+    "finding_types": [
+     "ADDRESS"
+    ],
+    "rules_found": false
+   },
+   {
+    "event": "DETECTION_WINDOW_STARTED",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "window_number": 1,
+    "attempt": 1,
+    "recovery": true
+   },
+   {
+    "event": "DETECTION_WINDOW_OUTCOME",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "issue_count": 0,
+    "valid_matches": 1,
+    "recovery": true,
+    "window_number": 1
+   },
+   {
+    "event": "RESIDUAL_CANDIDATES",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "candidates": 1,
+    "by_type": {
+     "ADDRESS": 1
+    },
+    "with_placeholder": 1,
+    "land_prefix_trimmed": 0,
+    "unmapped": 1,
+    "issue_codes": []
+   }
+  ]
+ }
+}

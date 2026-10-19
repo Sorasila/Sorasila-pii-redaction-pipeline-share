@@ -1,0 +1,7 @@
+# Store and check out text as LF on every platform. Tests compare fixture
+# bytes exactly, so a Windows CRLF checkout would otherwise break them.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.pdf binary

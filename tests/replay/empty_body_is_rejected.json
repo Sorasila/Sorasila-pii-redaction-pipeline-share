@@ -1,0 +1,22 @@
+{
+ "scenario": "empty_body_is_rejected",
+ "source": "ผู้ร้อง นายสมชาย ใจดี",
+ "request": {
+  "body_utf8": "",
+  "headers": {}
+ },
+ "calls": [],
+ "service": {
+  "response": {
+   "status": 400,
+   "content_type": "application/json",
+   "json": {
+    "error": "invalid_request",
+    "document_id": "<document_id>"
+   }
+  },
+  "log": [
+   "INFO redact status=400 llm_calls=0 by_role=- http_attempts=0 repairs=0 blank_resends=- verification_retries=0 residual_rounds=0 merge_selections=0 role_calls=0 recovery_calls=0 last_event=- residual=- selections=- reason=-"
+  ]
+ }
+}

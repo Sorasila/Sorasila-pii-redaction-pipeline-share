@@ -1,0 +1,124 @@
+{
+ "scenario": "residual_no_progress_fails_closed",
+ "source": "ผู้ร้องอยู่ ตำบลทดสอบ อำเภอสมมุติ จังหวัดตัวอย่าง",
+ "calls": [
+  {
+   "role": "candidates",
+   "body_sha256": "4344e1e097cf888f0d7dcd5d15040c72f06c2b8cc8ec11fe75f6a000f73e1247",
+   "context_sha256": "56277e2a18d6ea3e1f8e47cd8d17be6a67dbc7c8f03a7560e6d976e97ffc35e9",
+   "prompt_sha256": "ef494cde4203a6da4107a9c56d186d4a485d2f0525b1d19a18d8145ca88ca1b6",
+   "schema_sha256": "bd62e3789692dbbaa158079f8434c9a1d712beca23774a026a4894b5ff5bc8f5",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[]}}"
+  },
+  {
+   "role": "has_pii",
+   "body_sha256": "99b095a8a548f5ae7c866bbb3cc8556dc9cba769c4d91cefc87972aed83c299a",
+   "context_sha256": "56277e2a18d6ea3e1f8e47cd8d17be6a67dbc7c8f03a7560e6d976e97ffc35e9",
+   "prompt_sha256": "5b8da0110d9c15d8345366e5fba793c5ea54a3cb83d406952136ed638336a825",
+   "schema_sha256": "527b933a612b790483cf71a8caa2368246616365f723c8d45b3ee0e2a8bcdd72",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"has_pii\":true,\"findings\":[{\"pii_type\":\"ADDRESS\"}]}}"
+  },
+  {
+   "role": "candidates",
+   "body_sha256": "664438049f3f55e76a04ecaf4ad8209bb15f25c0861e21207922b50314d87f13",
+   "context_sha256": "56277e2a18d6ea3e1f8e47cd8d17be6a67dbc7c8f03a7560e6d976e97ffc35e9",
+   "prompt_sha256": "52f43a8dec6aa96a0f8ee6368ccc6ab509ae92e67a14b0a0045af4e3c23d9380",
+   "schema_sha256": "bd62e3789692dbbaa158079f8434c9a1d712beca23774a026a4894b5ff5bc8f5",
+   "status": 200,
+   "content_type": "application/json",
+   "body": "{\"status\":\"success\",\"model\":\"qwen/qwen3.6-27b\",\"structured_output\":{\"candidates\":[]}}"
+  }
+ ],
+ "service": {
+  "response": {
+   "status": 502,
+   "content_type": "application/json",
+   "json": {
+    "error": "processing_failed",
+    "document_id": "<document_id>"
+   }
+  },
+  "log": [
+   "WARNING redact status=502 llm_calls=3 by_role=detection:2,verification:1 http_attempts=3 repairs=1 blank_resends=- verification_retries=0 residual_rounds=1 merge_selections=0 role_calls=3 recovery_calls=1 last_event=RESIDUAL_CANDIDATES residual=findings:ADDRESS;rules:no;candidates:0;types:none;placeholder:0;land_prefix_trimmed:0;unmapped:0;issues:none selections=- reason=VerificationError(\"Residual recovery made no progress\")"
+  ]
+ },
+ "pipeline": {
+  "error": "VerificationError: Residual recovery made no progress",
+  "events": [
+   {
+    "event": "RECOVERY_STARTED",
+    "role_calls": 0,
+    "recovery_calls": 0,
+    "detection_windows": 1,
+    "max_recovery_calls": 4,
+    "reserved_recovery_calls": 0
+   },
+   {
+    "event": "DETECTION_WINDOW_STARTED",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1,
+    "recovery": false
+   },
+   {
+    "event": "DETECTION_WINDOW_OUTCOME",
+    "role_calls": 1,
+    "recovery_calls": 0,
+    "issue_count": 0,
+    "valid_matches": 0,
+    "recovery": false,
+    "window_number": 1
+   },
+   {
+    "event": "VERIFICATION_WINDOW_STARTED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "window_number": 1,
+    "attempt": 1
+   },
+   {
+    "event": "RESIDUAL_RECOVERY_STARTED",
+    "role_calls": 2,
+    "recovery_calls": 0,
+    "round_number": 1,
+    "finding_types": [
+     "ADDRESS"
+    ],
+    "rules_found": false
+   },
+   {
+    "event": "DETECTION_WINDOW_STARTED",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "window_number": 1,
+    "attempt": 1,
+    "recovery": true
+   },
+   {
+    "event": "DETECTION_WINDOW_OUTCOME",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "issue_count": 0,
+    "valid_matches": 0,
+    "recovery": true,
+    "window_number": 1
+   },
+   {
+    "event": "RESIDUAL_CANDIDATES",
+    "role_calls": 3,
+    "recovery_calls": 1,
+    "candidates": 0,
+    "by_type": {},
+    "with_placeholder": 0,
+    "land_prefix_trimmed": 0,
+    "unmapped": 0,
+    "issue_codes": []
+   }
+  ]
+ }
+}

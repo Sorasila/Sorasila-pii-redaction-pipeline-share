@@ -1,0 +1,21 @@
+{
+ "scenario": "wrong_token_is_rejected",
+ "source": "ผู้ร้อง นายสมชาย ใจดี",
+ "request": {
+  "body_utf8": null,
+  "headers": {
+   "authorization": "Bearer xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  }
+ },
+ "calls": [],
+ "service": {
+  "response": {
+   "status": 401,
+   "content_type": "application/json",
+   "json": {
+    "error": "authentication_failed"
+   }
+  },
+  "log": []
+ }
+}

@@ -1,0 +1,7 @@
+# Versions are fixed in constraints.txt (direct and transitive).
+-c constraints.txt
+fastapi
+uvicorn[standard]
+python-multipart
+httpx
+pydantic-settings
