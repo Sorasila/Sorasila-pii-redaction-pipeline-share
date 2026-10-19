@@ -2,7 +2,7 @@
 
 Service รับข้อความ Markdown ภาษาไทยที่ได้จาก OCR (ไม่เกิน 2000 ตัวอักษรต่อ request)
 หา PII แล้วแทนด้วย placeholder เช่น `[PII_NAME_1]` ตรวจซ้ำว่าไม่เหลือ PII
-แล้วตอบข้อความที่ปิดแล้วกลับไปใน request เดิม ถ้าตรวจไม่ผ่านจะตอบ error เสมอ
+แล้วตอบข้อความที่ปิดแล้วกลับไปใน request เดิม ถ้าตรวจไม่ผ่านจะตอบ error ตลอด
 ไม่มีผลบางส่วนหลุดออกไป
 
 เอกสารนี้สำหรับทีมที่นำ service ขึ้น container รายละเอียดอื่น:
@@ -116,8 +116,7 @@ PII_SERVICE_REQUEST_DEADLINE_SECONDS=1200
   ([.dockerignore](.dockerignore) อนุญาตแค่ `requirements.txt`, `constraints.txt`, `pii_pipeline/`
   ไฟล์อื่นเข้า image ไม่ได้)
 - Docker Compose: `env_file` ที่อยู่บนเซิร์ฟเวอร์ หรือ Docker secrets
-- Kubernetes: `LLM_PROXY_API_KEY`, `PII_SERVICE_API_TOKEN` ใน Secret ส่วนค่าอื่นใน ConfigMap
-- ใช้ token ของ production แยกจากเครื่องทดสอบเสมอ
+- ต้องใช้ token ของ production แยกจากเครื่องทดสอบ
 
 ### 3.5 ค่าที่ไม่ต้องตั้งใน production
 
