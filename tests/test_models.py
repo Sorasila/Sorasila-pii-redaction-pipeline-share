@@ -1,4 +1,4 @@
-from pii_pipeline.models import PiiCandidate, PiiEntry, PiiMatch, RedactionResult
+from pii_pipeline.core.models import PiiCandidate, PiiEntry, PiiMatch, RedactionResult
 
 
 def test_sensitive_values_are_hidden_from_model_repr() -> None:

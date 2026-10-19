@@ -3,14 +3,14 @@
 import pytest
 from fake_llm import run_recovery
 
-from pii_pipeline.detection import normalize_unicode
-from pii_pipeline.llm_response import (
+from pii_pipeline.core.detection import normalize_unicode
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.core.verification import VerificationError
+from pii_pipeline.llm.response import (
     parse_detection_response,
     parse_verification_response,
 )
-from pii_pipeline.redaction import redact
-from pii_pipeline.thai_rules import detect_thai_labeled_numbers
-from pii_pipeline.verification import VerificationError
+from pii_pipeline.rules.thai import detect_thai_labeled_numbers
 from smoke_llm import SMOKE_CASES
 
 ADDITIONAL_CASE_IDS = (

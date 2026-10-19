@@ -14,10 +14,10 @@ from uuid import UUID
 
 import pytest
 
-import pii_pipeline.delivery_package as package_module
-from pii_pipeline.delivery_package import DeliveryPackageError, prepare_delivery
-from pii_pipeline.llm_prompts import DETECTION_PROMPT_VERSION
-from pii_pipeline.models import PiiEntry, RedactionResult
+import pii_pipeline.service.delivery as package_module
+from pii_pipeline.core.models import PiiEntry, RedactionResult
+from pii_pipeline.llm.prompts import DETECTION_PROMPT_VERSION
+from pii_pipeline.service.delivery import DeliveryPackageError, prepare_delivery
 
 DOCUMENT_ID = UUID("00000000-0000-4000-8000-000000000001")
 DELIVERY_ID = UUID("00000000-0000-4000-8000-000000000002")

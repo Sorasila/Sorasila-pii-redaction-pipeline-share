@@ -1,7 +1,7 @@
 import pytest
 
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.redaction import (
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.redaction import (
     build_replacements_and_entries,
     is_exact_match,
     normalize_pii_type,

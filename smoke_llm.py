@@ -9,28 +9,28 @@ from types import MappingProxyType
 
 from pydantic import ValidationError
 
-from pii_pipeline.detection import normalize_unicode
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LlmProxySettings
-from pii_pipeline.llm_prompts import (
+from pii_pipeline.core.detection import normalize_unicode
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.redaction import RedactionError, redact
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LlmProxySettings
+from pii_pipeline.llm.prompts import (
     DETECTION_PROMPT_VERSION,
     VERIFICATION_PROMPT_VERSION,
     build_detection_prompt,
     build_verification_prompt,
 )
-from pii_pipeline.llm_proxy import (
+from pii_pipeline.llm.proxy import (
     PROXY_RESPONSE_REASON_CODES,
     LlmProxyError,
     LlmProxyHttpError,
     LlmProxyResponseError,
 )
-from pii_pipeline.llm_response import (
+from pii_pipeline.llm.response import (
     DetectionResponseError,
     StructuredResponseError,
     VerificationResponseError,
 )
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.redaction import RedactionError, redact
 
 
 @dataclass(frozen=True, slots=True)

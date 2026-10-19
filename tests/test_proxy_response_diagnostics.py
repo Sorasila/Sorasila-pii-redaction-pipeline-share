@@ -6,9 +6,9 @@ import httpx
 import pytest
 
 import smoke_llm
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_proxy import LlmProxyResponseError
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.proxy import LlmProxyResponseError
 
 
 @pytest.fixture(autouse=True)

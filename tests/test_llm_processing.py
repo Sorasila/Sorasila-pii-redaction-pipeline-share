@@ -4,10 +4,10 @@ import traceback
 import httpx
 import pytest
 
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_processing import LlmDocumentProcessor
-from pii_pipeline.llm_windows import TextWindow, WindowContractError, make_text_window
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.processing import LlmDocumentProcessor
+from pii_pipeline.llm.windows import TextWindow, WindowContractError, make_text_window
 
 
 @pytest.fixture(autouse=True)

@@ -8,9 +8,10 @@ import dataclasses
 import hashlib
 import json
 
-from pii_pipeline import llm_prompts, llm_schema
-from pii_pipeline.llm_config import LlmProxySettings
-from pii_pipeline.llm_recovery import _REPAIR_INSTRUCTION, RecoveryPolicy
+from pii_pipeline.llm import prompts as llm_prompts
+from pii_pipeline.llm import schema as llm_schema
+from pii_pipeline.llm.config import LlmProxySettings
+from pii_pipeline.recovery.process import _REPAIR_INSTRUCTION, RecoveryPolicy
 from pii_pipeline.service import ServiceSettings
 
 

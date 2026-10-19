@@ -3,8 +3,8 @@ import traceback
 import httpx
 import pytest
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL
-from pii_pipeline.llm_proxy import (
+from pii_pipeline.llm.config import LLM_PROXY_MODEL
+from pii_pipeline.llm.proxy import (
     PROXY_RESPONSE_REASON_CODES,
     LlmProxyHttpError,
     LlmProxyResponseError,

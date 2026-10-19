@@ -1,9 +1,5 @@
 # HTTP contract: raw Markdown and multipart delivery
 
-ข้อตกลงนี้ยึด Handoff revised ข้อ 3 และ 4.1 (`Handoff.revised.md`, เอกสารส่วนตัว ไม่อยู่ใน repo)
-และคำยืนยันผู้ใช้วันที่ 2026-10-02: รับ raw string, รอผลใน request เดียว
-และใช้ multipart ตามข้อ 3 ข้อความ Markdown ต้องไม่มี JSON wrapper หรือ PII mapping ปนอยู่
-
 ## Request
 
 Adapter ใช้ `POST /redact` โดยรับ body เป็นข้อความ Markdown UTF-8 โดยตรง

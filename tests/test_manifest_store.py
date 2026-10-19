@@ -310,9 +310,9 @@ def test_the_service_refuses_an_unsafe_store(overrides, message):
 def test_create_app_refuses_a_store_that_is_not_async():
     from fake_llm import fake_processor
 
+    from pii_pipeline.core.verification import make_detection_checker
     from pii_pipeline.recovery.process import RecoveryPolicy
     from pii_pipeline.rules.thai import detect_thai_rule_pii
-    from pii_pipeline.verification import make_detection_checker
 
     async def allow(_request):
         return True

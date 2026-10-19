@@ -6,18 +6,18 @@ import httpx
 import pytest
 from test_llm_recovery import candidates, form, run, settings, success, verification
 
-from pii_pipeline.detection import DetectionError
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_conflict_options import split_initial_conflicts
-from pii_pipeline.llm_conflicts import plan_match_selection, resolve_match_selection
-from pii_pipeline.llm_occurrences import plan_detection_occurrences
-from pii_pipeline.llm_recovery import RecoveryMergeError, RecoveryPolicy
-from pii_pipeline.llm_response import DetectionResponseError
-from pii_pipeline.llm_windows import make_text_window
-from pii_pipeline.models import PiiCandidate, PiiMatch
-from pii_pipeline.redaction import redact
-from pii_pipeline.thai_rules import detect_thai_labeled_numbers
-from pii_pipeline.verification import VerificationError
+from pii_pipeline.core.detection import DetectionError
+from pii_pipeline.core.models import PiiCandidate, PiiMatch
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.core.verification import VerificationError
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.response import DetectionResponseError
+from pii_pipeline.llm.windows import make_text_window
+from pii_pipeline.recovery.process import RecoveryMergeError, RecoveryPolicy
+from pii_pipeline.rules.thai import detect_thai_labeled_numbers
+from pii_pipeline.selection.conflicts import split_initial_conflicts
+from pii_pipeline.selection.occurrences import plan_detection_occurrences
+from pii_pipeline.selection.spans import plan_match_selection, resolve_match_selection
 
 
 def option_response(context, decisions):

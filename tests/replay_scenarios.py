@@ -32,7 +32,7 @@ from replay_support import (
     run_service,
 )
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL
+from pii_pipeline.llm.config import LLM_PROXY_MODEL
 
 GOLDEN_DIR = Path(__file__).parent / "replay"
 

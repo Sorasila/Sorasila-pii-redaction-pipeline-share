@@ -7,6 +7,7 @@ Both may be plain or async functions and may raise to simulate failures.
 
 from inspect import isawaitable
 
+from pii_pipeline.core.verification import make_detection_checker
 from pii_pipeline.llm.processing import LlmDocumentProcessor
 from pii_pipeline.llm.response import (
     DetectionOutcome,
@@ -19,7 +20,6 @@ from pii_pipeline.recovery.process import (
     process_markdown_with_recovery_async,
 )
 from pii_pipeline.rules.thai import detect_thai_rule_pii
-from pii_pipeline.verification import make_detection_checker
 
 
 async def _call(function, text):

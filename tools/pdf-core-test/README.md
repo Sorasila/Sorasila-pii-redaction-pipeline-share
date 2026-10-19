@@ -12,7 +12,7 @@
 | Core ที่ใช้ | detection `pii-detection-v18`, verification `pii-verification-v11`, `automatic-recovery-v3` พร้อม forced conflict resolution, initial legal-option selection, reserved recovery calls, near-copy location (ช่องว่าง/แก้ OCR/ต่อข้ามเส้นแบ่งหน้า) และการส่งซ้ำเมื่อได้คำตอบว่าง |
 | Rule lane | `detect_thai_rule_pii` ทั้ง rule detection และ rule verification: CASE_NUMBER, TITLE_DEED_NUMBER, LAND_PARCEL_NUMBER, OFFICIAL_LETTER_NUMBER, ID_NUMBER, PHONE, FAX, BANK_ACCOUNT_NUMBER, PASSPORT_NUMBER, EMAIL |
 | Tests | harness 79 passed; core 1291 passed (Python 3.12 และ 3.13) |
-| Live | วัดบนเครื่อง LLM ทดสอบที่ช้า ต้องวัดซ้ำเมื่อใช้เครื่อง LLM production ได้ ผลทั้งหมดอยู่ใน `LEARNING_HANDOFF.md` (เอกสารส่วนตัว ไม่อยู่ใน repo) |
+| Live | วัดบนเครื่อง LLM ทดสอบที่ช้า ต้องวัดซ้ำเมื่อใช้เครื่อง LLM production ได้ |
 
 ## สิ่งที่ต้องมี
 
@@ -140,14 +140,6 @@ Error codes ที่พบบ่อย: `PROXY_TRANSPORT_ERROR` (เช่น R
 | `diag_window22_verify_recall.py` | วัดว่า verification จับ PII ที่ตั้งใจคืนค่าไว้ได้หรือไม่ |
 | `diag_window32.py`, `diag_window32_copy.py` | การวินิจฉัย window 32 รุ่นแรก (ถูกแทนด้วย `diag_window_copy.py`) |
 
-## เอกสารในโฟลเดอร์นี้
+## เอกสารที่เกี่ยวข้อง
 
-| ไฟล์ | สถานะ |
-| --- | --- |
-| [DESIGN.md](DESIGN.md) | design ของ harness |
-| [NO_ANCHOR_DETECTION_DESIGN.md](NO_ANCHOR_DETECTION_DESIGN.md) | ฐานของ detection ปัจจุบัน (ไม่ใช้ anchor, occurrence selection) |
-| [LLM_REGEX_FLOW_REVIEW.md](LLM_REGEX_FLOW_REVIEW.md) | flow LLM-first + rule safety net และ automatic recovery ที่อนุมัติแล้ว |
-| [CONFLICT_RECONCILIATION_DESIGN.md](CONFLICT_RECONCILIATION_DESIGN.md) | design ของ legal option selection (v3) |
-วันที่ 2026-10-05 ลบเอกสารประวัติที่ถูกแทนแล้วออก (ข้อเสนอสมัย anchor/v8, review contract, ผลตรวจ proxy, ข้อเสนอ initial selection ที่ implement แล้ว) และลบการทดลองเทียบ structured output กับ chat completion (`compare_llm.py` กับ tests) ที่สั่งหยุดไปแล้ว ชื่อไฟล์เหล่านั้นที่ยังปรากฏในเอกสารอื่นเป็นการอ้างถึงทางประวัติ ไม่ใช่ลิงก์
-
-ผลการรันจริงทุกรอบ การตัดสินใจ และจุดกลับมาทำต่ออยู่ที่ `LEARNING_HANDOFF.md` ส่วน design หลักของระบบอยู่ที่ `Handoff.revised.md` ทั้งสองเป็นเอกสารส่วนตัว ไม่อยู่ใน repo
+การทำงานของ pipeline และขอบเขต PII: [docs/OVERVIEW.md](../../docs/OVERVIEW.md); สัญญา HTTP: [docs/http-contract.md](../../docs/http-contract.md)

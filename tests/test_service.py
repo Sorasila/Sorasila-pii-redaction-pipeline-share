@@ -10,7 +10,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
 from pii_pipeline.service import (
     UNENCRYPTED_TEST_KID,
     ServiceConfigurationError,

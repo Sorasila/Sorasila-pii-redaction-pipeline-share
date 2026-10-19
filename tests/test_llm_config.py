@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
 
 
 def test_llm_proxy_settings_builds_structured_output_url() -> None:

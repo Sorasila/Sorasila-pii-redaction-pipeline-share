@@ -6,19 +6,19 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_occurrences import (
-    plan_detection_occurrences,
-    resolve_detection_occurrences,
-)
-from pii_pipeline.llm_response import (
+from pii_pipeline.core.models import PiiCandidate
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.response import (
     DetectionResponseError,
     parse_detection_candidates,
     parse_detection_response,
 )
-from pii_pipeline.models import PiiCandidate
-from pii_pipeline.redaction import redact
+from pii_pipeline.selection.occurrences import (
+    plan_detection_occurrences,
+    resolve_detection_occurrences,
+)
 
 
 def test_equal_birth_and_document_dates_select_only_birth_and_trace_each_copy():
@@ -227,7 +227,7 @@ async def test_cancellation_during_selection_does_not_return_direct_partial_matc
 
 # Approved 2026-10-15 (proposal 3.1): copies settled without the LLM.
 def test_rule_matched_copies_are_settled_and_the_rest_renumbered():
-    from pii_pipeline.models import PiiCandidate, PiiMatch
+    from pii_pipeline.core.models import PiiCandidate, PiiMatch
     from pii_pipeline.selection.occurrences import (
         plan_detection_occurrences,
         settle_occurrences,
@@ -268,7 +268,7 @@ def test_rule_matched_copies_are_settled_and_the_rest_renumbered():
     ],
 )
 def test_titled_names_and_long_addresses_are_settled(pii_type, value, settled):
-    from pii_pipeline.models import PiiCandidate
+    from pii_pipeline.core.models import PiiCandidate
     from pii_pipeline.selection.occurrences import (
         plan_detection_occurrences,
         settle_occurrences,
@@ -282,7 +282,7 @@ def test_titled_names_and_long_addresses_are_settled(pii_type, value, settled):
 
 
 def test_two_proposed_types_are_left_to_the_model():
-    from pii_pipeline.models import PiiCandidate
+    from pii_pipeline.core.models import PiiCandidate
     from pii_pipeline.selection.occurrences import (
         plan_detection_occurrences,
         settle_occurrences,

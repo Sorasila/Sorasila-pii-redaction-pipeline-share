@@ -1,4 +1,4 @@
-from pii_pipeline.models import PiiMatch
+from pii_pipeline.core.models import PiiMatch
 
 """Frozen semantic counterexamples and injection/OCR acceptance-harness guards."""
 
@@ -10,15 +10,15 @@ import pytest
 from wire_fixtures import decisions_for_plan
 
 import smoke_llm
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_occurrences import plan_detection_occurrences
-from pii_pipeline.llm_response import (
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.response import (
     DetectionResponseError,
     parse_detection_candidates,
     parse_detection_response,
 )
-from pii_pipeline.redaction import redact
+from pii_pipeline.selection.occurrences import plan_detection_occurrences
 from smoke_llm import SMOKE_CASES, VERIFICATION_SMOKE_CASES, run_smoke
 
 

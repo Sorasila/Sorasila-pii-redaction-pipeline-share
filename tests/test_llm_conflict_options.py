@@ -3,16 +3,16 @@ from itertools import product
 
 import pytest
 
-from pii_pipeline.llm_conflict_options import (
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.pii_types import CANONICAL_PII_TYPES
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.prompts import build_conflict_selection_prompt
+from pii_pipeline.llm.response import DetectionResponseError
+from pii_pipeline.selection.conflicts import (
     build_conflict_options_schema,
     plan_conflict_options,
     resolve_conflict_options,
 )
-from pii_pipeline.llm_prompts import build_conflict_selection_prompt
-from pii_pipeline.llm_response import DetectionResponseError
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.pii_types import CANONICAL_PII_TYPES
-from pii_pipeline.redaction import redact
 
 
 def response(*options):

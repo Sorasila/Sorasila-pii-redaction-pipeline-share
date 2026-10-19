@@ -665,13 +665,13 @@ class TracedClient:
             if self.failure_code == "CALL_CAP_EXCEEDED":
                 item["status"] = self.failure_code
                 fail("CALL_CAP_EXCEEDED")
-            from pii_pipeline.llm_proxy import (
+            from pii_pipeline.llm.proxy import (
                 LlmProxyHttpError,
                 LlmProxyResponseError,
                 LlmProxyTimeoutError,
                 LlmProxyTransportError,
             )
-            from pii_pipeline.llm_response import (
+            from pii_pipeline.llm.response import (
                 DetectionResponseError,
                 VerificationResponseError,
             )
@@ -833,7 +833,7 @@ def transport_failure_kind(error):
 
 
 def diagnostic_client_class():
-    from pii_pipeline.llm_client import LlmProxyClient
+    from pii_pipeline.llm.client import LlmProxyClient
 
     class DiagnosticClient(LlmProxyClient):
         request_callback = None
@@ -952,21 +952,21 @@ def diagnostic_client_class():
 async def execute_core(
     source, meta, plan, client, budget: RunBudget, progress=None, *, recovery_policy
 ):
-    from pii_pipeline.llm_processing import LlmDocumentProcessor
-    from pii_pipeline.llm_prompts import (
+    from pii_pipeline.core.redaction import RedactionError
+    from pii_pipeline.core.verification import VerificationError, make_detection_checker
+    from pii_pipeline.llm.processing import LlmDocumentProcessor
+    from pii_pipeline.llm.prompts import (
         DETECTION_PROMPT_VERSION,
         VERIFICATION_PROMPT_VERSION,
     )
-    from pii_pipeline.llm_recovery import (
+    from pii_pipeline.llm.windows import make_text_window
+    from pii_pipeline.recovery.process import (
         RECOVERY_MERGE_REASON_CODES,
         RECOVERY_VERSION,
         RecoveryMergeError,
         process_markdown_with_recovery_async,
     )
-    from pii_pipeline.llm_windows import make_text_window
-    from pii_pipeline.redaction import RedactionError
-    from pii_pipeline.thai_rules import detect_thai_rule_pii
-    from pii_pipeline.verification import VerificationError, make_detection_checker
+    from pii_pipeline.rules.thai import detect_thai_rule_pii
 
     budget.validate(len(plan["windows"]))
     frozen = tuple((w["start"], w["end"]) for w in plan["windows"])
@@ -1226,9 +1226,9 @@ async def run_live(
         plan = {**plan, "windows": [{"start": 0, "end": len(source)}]}
     budget.validate(len(plan["windows"]))
     attach_pipeline(pipeline)
-    from pii_pipeline.llm_config import LlmProxySettings
-    from pii_pipeline.llm_recovery import RecoveryPolicy
-    from pii_pipeline.redaction import validate_redaction_source
+    from pii_pipeline.core.redaction import validate_redaction_source
+    from pii_pipeline.llm.config import LlmProxySettings
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     policy = RecoveryPolicy(
         max_role_calls=budget.max_calls,
@@ -1288,7 +1288,7 @@ async def run_live(
 
 
 def inspection_prompt(profile):
-    from pii_pipeline.llm_prompts import build_detection_prompt
+    from pii_pipeline.llm.prompts import build_detection_prompt
 
     baseline = build_detection_prompt()
     if profile == "baseline":
@@ -1307,11 +1307,11 @@ def export_swagger_input(
     attach_pipeline(pipeline)
     import httpx
 
-    from pii_pipeline.llm_client import LlmProxyClient
-    from pii_pipeline.llm_config import LLM_PROXY_MODEL
-    from pii_pipeline.llm_prompts import DETECTION_PROMPT_VERSION
-    from pii_pipeline.llm_schema import build_detection_response_schema
-    from pii_pipeline.redaction import validate_redaction_source
+    from pii_pipeline.core.redaction import validate_redaction_source
+    from pii_pipeline.llm.client import LlmProxyClient
+    from pii_pipeline.llm.config import LLM_PROXY_MODEL
+    from pii_pipeline.llm.prompts import DETECTION_PROMPT_VERSION
+    from pii_pipeline.llm.schema import build_detection_response_schema
 
     validate_redaction_source(source)
     window = plan["windows"][window_number - 1]
@@ -1392,9 +1392,9 @@ async def inspect_detection(
     if window_number > len(plan["windows"]):
         fail("INVALID_WINDOW_NUMBER")
     attach_pipeline(pipeline)
-    from pii_pipeline.llm_config import LlmProxySettings
-    from pii_pipeline.llm_prompts import DETECTION_PROMPT_VERSION
-    from pii_pipeline.redaction import validate_redaction_source
+    from pii_pipeline.core.redaction import validate_redaction_source
+    from pii_pipeline.llm.config import LlmProxySettings
+    from pii_pipeline.llm.prompts import DETECTION_PROMPT_VERSION
 
     validate_redaction_source(source)
     window = plan["windows"][window_number - 1]

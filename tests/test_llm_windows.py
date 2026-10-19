@@ -1,11 +1,11 @@
 import pytest
 
-from pii_pipeline.llm_response import (
+from pii_pipeline.llm.response import (
     VerificationFinding,
     VerificationResponse,
     parse_verification_response,
 )
-from pii_pipeline.llm_windows import (
+from pii_pipeline.llm.windows import (
     TextWindow,
     VerificationWindowResult,
     WindowContractError,

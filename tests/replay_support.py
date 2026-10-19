@@ -24,17 +24,17 @@ from urllib.parse import parse_qs
 
 import httpx
 
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LlmProxySettings
-from pii_pipeline.llm_processing import LlmDocumentProcessor
-from pii_pipeline.llm_recovery import (
+from pii_pipeline.core.verification import make_detection_checker
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LlmProxySettings
+from pii_pipeline.llm.processing import LlmDocumentProcessor
+from pii_pipeline.llm.windows import make_text_window
+from pii_pipeline.recovery.process import (
     RecoveryPolicy,
     process_markdown_with_recovery_async,
 )
-from pii_pipeline.llm_windows import make_text_window
+from pii_pipeline.rules.thai import detect_thai_rule_pii
 from pii_pipeline.service import ServiceSettings, create_service_app
-from pii_pipeline.thai_rules import detect_thai_rule_pii
-from pii_pipeline.verification import make_detection_checker
 
 TOKEN = "r" * 40
 SERVICE_DEADLINE_SECONDS = 1200

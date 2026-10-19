@@ -1,14 +1,14 @@
 import pytest
 
-from pii_pipeline.detection import DetectionError, normalize_unicode, run_detectors
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.redaction import redact
-from pii_pipeline.thai_rules import (
+from pii_pipeline.core.detection import DetectionError, normalize_unicode, run_detectors
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.core.verification import make_detection_checker
+from pii_pipeline.rules.thai import (
     detect_thai_labeled_identifiers,
     detect_thai_labeled_numbers,
     detect_thai_rule_pii,
 )
-from pii_pipeline.verification import make_detection_checker
 
 
 @pytest.mark.parametrize(

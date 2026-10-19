@@ -13,10 +13,10 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_response import parse_detection_response
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.response import parse_detection_response
+from pii_pipeline.rules.thai import detect_thai_rule_pii
 from pii_pipeline.service import ServiceSettings, create_service_app
-from pii_pipeline.thai_rules import detect_thai_rule_pii
 
 REPO = Path(__file__).resolve().parents[1]
 SAMPLES = REPO / "samples" / "synthetic"

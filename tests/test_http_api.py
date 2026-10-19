@@ -14,12 +14,12 @@ import pytest
 from fake_llm import fake_processor
 from fastapi import Request
 
-from pii_pipeline import http_api
-from pii_pipeline.delivery_package import PreparedDelivery, prepare_delivery
-from pii_pipeline.http_api import HttpApiConfigurationError, create_app
-from pii_pipeline.llm_recovery import RecoveryPolicy
-from pii_pipeline.models import PiiMatch
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.recovery.process import RecoveryPolicy
+from pii_pipeline.service import http as http_api
 from pii_pipeline.service import request_log
+from pii_pipeline.service.delivery import PreparedDelivery, prepare_delivery
+from pii_pipeline.service.http import HttpApiConfigurationError, create_app
 
 CANARY = "Synthetic Private Name"
 
@@ -873,11 +873,11 @@ async def test_automatic_recovery_http_delivers_only_after_final_verification(
     import os
     from urllib.parse import parse_qs
 
-    from pii_pipeline.llm_client import LlmProxyClient
-    from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-    from pii_pipeline.llm_processing import LlmDocumentProcessor
-    from pii_pipeline.llm_recovery import RecoveryPolicy
-    from pii_pipeline.llm_windows import make_text_window
+    from pii_pipeline.llm.client import LlmProxyClient
+    from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+    from pii_pipeline.llm.processing import LlmDocumentProcessor
+    from pii_pipeline.llm.windows import make_text_window
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     for name in list(os.environ):
         if name.startswith("LLM_PROXY_"):
@@ -1045,7 +1045,7 @@ def test_residual_summary_reports_fixed_types_and_shapes_only():
 
 
 def test_safe_reason_keeps_fixed_core_messages_and_drops_external_ones():
-    from pii_pipeline.verification import VerificationError
+    from pii_pipeline.core.verification import VerificationError
 
     try:
         try:

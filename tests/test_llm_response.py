@@ -2,7 +2,10 @@ import traceback
 
 import pytest
 
-from pii_pipeline.llm_response import (
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.pii_types import CANONICAL_PII_TYPES
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.response import (
     DetectionResponseError,
     VerificationFinding,
     VerificationResponse,
@@ -11,9 +14,6 @@ from pii_pipeline.llm_response import (
     parse_detection_response,
     parse_verification_response,
 )
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.pii_types import CANONICAL_PII_TYPES
-from pii_pipeline.redaction import redact
 
 
 def test_detection_unique_exact_values_sort_and_normalize_nfc():

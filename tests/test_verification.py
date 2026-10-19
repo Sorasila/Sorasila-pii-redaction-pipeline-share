@@ -2,8 +2,8 @@ import re
 
 import pytest
 
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.verification import (
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.verification import (
     VerificationError,
     make_detection_checker,
 )

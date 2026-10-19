@@ -11,9 +11,9 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from pii_pipeline.call_stats import collect_call_stats, record, role_of
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_schema import (
+from pii_pipeline.llm.call_stats import collect_call_stats, record, role_of
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.schema import (
     build_detection_response_schema,
     build_occurrence_selection_schema,
     build_verification_response_schema,

@@ -2,15 +2,15 @@ import json
 
 import pytest
 
-from pii_pipeline.llm_schema import (
-    build_detection_response_schema,
-    build_verification_response_schema,
-)
-from pii_pipeline.pii_types import (
+from pii_pipeline.core.pii_types import (
     CANONICAL_PII_TYPES,
     PII_TYPE_SCOPE_NOTES,
     PiiType,
     canonicalize_pii_type,
+)
+from pii_pipeline.llm.schema import (
+    build_detection_response_schema,
+    build_verification_response_schema,
 )
 
 

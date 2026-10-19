@@ -10,9 +10,9 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_proxy import (
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.proxy import (
     LlmProxyConfigurationError,
     LlmProxyHttpError,
     LlmProxyRequestError,
@@ -20,8 +20,8 @@ from pii_pipeline.llm_proxy import (
     LlmProxyTimeoutError,
     LlmProxyTransportError,
 )
-from pii_pipeline.llm_response import DetectionResponseError, VerificationResponseError
-from pii_pipeline.llm_schema import (
+from pii_pipeline.llm.response import DetectionResponseError, VerificationResponseError
+from pii_pipeline.llm.schema import (
     build_detection_response_schema,
     build_verification_response_schema,
 )
@@ -846,7 +846,7 @@ async def test_role_parser_cannot_return_success_after_consuming_deadline(
         return []
 
     monkeypatch.setattr(
-        "pii_pipeline.llm_client.parse_detection_candidates", slow_parser
+        "pii_pipeline.llm.client.parse_detection_candidates", slow_parser
     )
     async with LlmProxyClient(
         make_settings(),

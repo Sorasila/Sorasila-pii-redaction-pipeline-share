@@ -9,17 +9,17 @@ import pytest
 from fake_llm import whole
 
 import smoke_llm
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_processing import LlmDocumentProcessor
-from pii_pipeline.llm_prompts import build_verification_prompt
-from pii_pipeline.llm_recovery import (
+from pii_pipeline.core.verification import make_detection_checker
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.processing import LlmDocumentProcessor
+from pii_pipeline.llm.prompts import build_verification_prompt
+from pii_pipeline.llm.response import parse_detection_response
+from pii_pipeline.recovery.process import (
     RecoveryPolicy,
     process_markdown_with_recovery_async,
 )
-from pii_pipeline.llm_response import parse_detection_response
-from pii_pipeline.thai_rules import detect_thai_labeled_numbers
-from pii_pipeline.verification import make_detection_checker
+from pii_pipeline.rules.thai import detect_thai_labeled_numbers
 from smoke_llm import SMOKE_CASES, VERIFICATION_SMOKE_CASES, run_smoke
 
 NEGATIVE_FALSE_POSITIVES = {

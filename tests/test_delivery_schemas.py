@@ -11,11 +11,11 @@ from uuid import UUID, uuid4
 import pytest
 from test_delivery_package import fake_jwe
 
-from pii_pipeline.delivery_package import prepare_delivery
-from pii_pipeline.llm_prompts import DETECTION_PROMPT_VERSION
-from pii_pipeline.models import PiiMatch, RedactionResult
-from pii_pipeline.pii_types import CANONICAL_PII_TYPES
-from pii_pipeline.redaction import redact
+from pii_pipeline.core.models import PiiMatch, RedactionResult
+from pii_pipeline.core.pii_types import CANONICAL_PII_TYPES
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.prompts import DETECTION_PROMPT_VERSION
+from pii_pipeline.service.delivery import prepare_delivery
 
 DOCS = Path(__file__).resolve().parents[1] / "docs"
 MANIFEST_SCHEMA = json.loads(

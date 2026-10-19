@@ -12,22 +12,22 @@ from wire_fixtures import (
     golden_selection_transport,  # noqa: F401
 )
 
-from pii_pipeline.llm_occurrences import plan_detection_occurrences
-from pii_pipeline.llm_response import parse_detection_candidates
+from pii_pipeline.llm.response import parse_detection_candidates
+from pii_pipeline.selection.occurrences import plan_detection_occurrences
 
 pytestmark = pytest.mark.usefixtures("golden_selection_transport")
 
-from pii_pipeline.detection import normalize_unicode
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_proxy import LlmProxyHttpError, LlmProxyTransportError
-from pii_pipeline.llm_response import (
+from pii_pipeline.core.detection import normalize_unicode
+from pii_pipeline.core.models import PiiMatch, RedactionResult
+from pii_pipeline.core.redaction import redact
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.proxy import LlmProxyHttpError, LlmProxyTransportError
+from pii_pipeline.llm.response import (
     DetectionResponseError,
     VerificationResponseError,
     parse_detection_response,
 )
-from pii_pipeline.models import PiiMatch, RedactionResult
-from pii_pipeline.redaction import redact
 from smoke_llm import (
     SMOKE_CASES,
     main,

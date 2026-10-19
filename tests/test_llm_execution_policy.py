@@ -3,8 +3,8 @@ import os
 import pytest
 from pydantic import ValidationError
 
-from pii_pipeline.llm_config import LlmProxySettings
-from pii_pipeline.llm_proxy import is_retryable_status_code
+from pii_pipeline.llm.config import LlmProxySettings
+from pii_pipeline.llm.proxy import is_retryable_status_code
 
 
 @pytest.fixture(autouse=True)

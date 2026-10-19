@@ -14,7 +14,7 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from pii_pipeline.llm_config import LLM_PROXY_MODEL
+from pii_pipeline.llm.config import LLM_PROXY_MODEL
 from smoke_llm import SMOKE_CASES
 
 

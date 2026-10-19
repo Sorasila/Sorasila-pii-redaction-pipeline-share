@@ -5,24 +5,24 @@ from urllib.parse import parse_qs
 import httpx
 import pytest
 
-from pii_pipeline.detection import DetectionError
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LLM_PROXY_MODEL, LlmProxySettings
-from pii_pipeline.llm_processing import LlmDocumentProcessor
-from pii_pipeline.llm_recovery import (
+from pii_pipeline.core.detection import DetectionError
+from pii_pipeline.core.models import PiiMatch
+from pii_pipeline.core.verification import VerificationError
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LLM_PROXY_MODEL, LlmProxySettings
+from pii_pipeline.llm.processing import LlmDocumentProcessor
+from pii_pipeline.llm.response import (
+    DetectionResponseError,
+    parse_detection_candidates,
+    parse_detection_outcome,
+)
+from pii_pipeline.llm.windows import make_text_window
+from pii_pipeline.recovery.process import (
     RecoveryLimitError,
     RecoveryMergeError,
     RecoveryPolicy,
     process_markdown_with_recovery_async,
 )
-from pii_pipeline.llm_response import (
-    DetectionResponseError,
-    parse_detection_candidates,
-    parse_detection_outcome,
-)
-from pii_pipeline.llm_windows import make_text_window
-from pii_pipeline.models import PiiMatch
-from pii_pipeline.verification import VerificationError
 
 
 @pytest.fixture(autouse=True)
@@ -766,8 +766,8 @@ ONE_LEVEL_SOURCE = f"ที่ดินตาม น.ส. 3 ก. เลขที
 
 
 def land_rules():
-    from pii_pipeline.thai_rules import detect_thai_rule_pii
-    from pii_pipeline.verification import make_detection_checker
+    from pii_pipeline.core.verification import make_detection_checker
+    from pii_pipeline.rules.thai import detect_thai_rule_pii
 
     return detect_thai_rule_pii, make_detection_checker([detect_thai_rule_pii])
 
@@ -902,7 +902,7 @@ async def test_residual_value_still_crossing_a_placeholder_fails_closed_with_its
 
 
 def test_only_an_address_starting_with_a_land_placeholder_is_trimmed():
-    from pii_pipeline.land_address import trim_land_placeholder
+    from pii_pipeline.selection.land import trim_land_placeholder
 
     value = "[PII_LAND_PARCEL_NUMBER_2]\nตำบลทดสอบ"
     trimmed, cut = trim_land_placeholder(PiiMatch("ADDRESS", value, 5, 5 + len(value)))
@@ -916,7 +916,7 @@ def test_only_an_address_starting_with_a_land_placeholder_is_trimmed():
 
 
 def test_only_an_address_that_overlaps_nothing_else_absorbs_land_numbers():
-    from pii_pipeline.land_address import absorbed_land_numbers
+    from pii_pipeline.selection.land import absorbed_land_numbers
 
     address = PiiMatch("ADDRESS", "x" * 20, 10, 30)
     number = PiiMatch("TITLE_DEED_NUMBER", "123", 10, 13)

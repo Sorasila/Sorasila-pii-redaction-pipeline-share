@@ -1,11 +1,11 @@
 import pytest
 
-from pii_pipeline.detection import (
+from pii_pipeline.core.detection import (
     DetectionError,
     normalize_unicode,
     run_detectors,
 )
-from pii_pipeline.models import PiiMatch
+from pii_pipeline.core.models import PiiMatch
 
 
 def test_normalize_unicode_converts_decomposed_text_to_nfc() -> None:

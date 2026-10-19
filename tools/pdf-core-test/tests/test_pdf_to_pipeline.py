@@ -20,8 +20,8 @@ import pdf_to_pipeline as bridge
 bridge.attach_pipeline(bridge.DEFAULT_PIPELINE)
 import httpx
 
-from pii_pipeline.llm_client import LlmProxyClient
-from pii_pipeline.llm_config import LlmProxySettings
+from pii_pipeline.llm.client import LlmProxyClient
+from pii_pipeline.llm.config import LlmProxySettings
 
 
 def pdf(path, pages):
@@ -176,7 +176,7 @@ def test_transport_diagnostics_keep_kind_and_budgets_without_private_data(
         raise error
 
     async def run():
-        from pii_pipeline.llm_recovery import RecoveryPolicy
+        from pii_pipeline.recovery.process import RecoveryPolicy
 
         async with bridge.diagnostic_client_class()(
             settings(), transport=httpx.MockTransport(broken)
@@ -436,7 +436,7 @@ def test_work_paths_and_existing_preparation(tmp_path):
 
 
 async def run_case(work, callback=handler, *, budget=None, recovery_policy=None):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     source, meta, plan = bridge.read_prepared(work, require_review=True)
     async with LlmProxyClient(
@@ -453,7 +453,7 @@ async def run_case(work, callback=handler, *, budget=None, recovery_policy=None)
 
 
 def test_recovery_core_retains_good_value_and_repairs_copy_error(tmp_path):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, ["Name Alice phone 123"], cap=200)
     bridge.review(work, [])
@@ -485,7 +485,7 @@ def test_recovery_core_retains_good_value_and_repairs_copy_error(tmp_path):
 
 
 def test_recovery_still_blocks_failed_final_verification(tmp_path):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, ["Name Alice"], cap=200)
     bridge.review(work, [])
@@ -512,7 +512,7 @@ def test_recovery_still_blocks_failed_final_verification(tmp_path):
 
 @pytest.mark.parametrize("changed", ["boundary", "type"])
 def test_repair_merge_rejection_reports_reason_without_pii_or_output(tmp_path, changed):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, ["Alice Smith"], cap=200)
     bridge.review(work, [])
@@ -580,7 +580,7 @@ def test_repair_merge_rejection_reports_reason_without_pii_or_output(tmp_path, c
 
 
 def test_recovery_counts_every_selection_request_at_physical_cap(tmp_path):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, ["Alice Alice"], cap=200)
     bridge.review(work, [])
@@ -613,7 +613,7 @@ def test_recovery_counts_every_selection_request_at_physical_cap(tmp_path):
 def test_forced_rule_conflict_preserves_case_label_without_selection_request(
     tmp_path,
 ):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, ["คดีหมายเลขดำที่ 123/2569"], cap=200)
     bridge.review(work, [])
@@ -665,7 +665,7 @@ def test_forced_rule_conflict_preserves_case_label_without_selection_request(
 def test_live_single_window_runs_recovery_and_verification_without_publishing(
     tmp_path, monkeypatch
 ):
-    from pii_pipeline import llm_config
+    from pii_pipeline.llm import config as llm_config
 
     work = setup_case(tmp_path, ["Name Alice", "Name Bob"], cap=25, overlap=0)
     bridge.review(work, [])
@@ -740,7 +740,8 @@ def test_core_cli_passes_window_and_recovery_limits(tmp_path, monkeypatch, capsy
 
 
 def test_live_reserved_recovery_calls_reach_policy(tmp_path, monkeypatch):
-    from pii_pipeline import llm_config, llm_recovery
+    from pii_pipeline.llm import config as llm_config
+    from pii_pipeline.recovery import process as llm_recovery
 
     work = setup_case(tmp_path, ["Name Alice"], cap=25, overlap=0)
     bridge.review(work, [])
@@ -832,7 +833,7 @@ def test_verification_receives_fresh_redacted_source(tmp_path):
 # with no retry budget must stop the run without publishing anything.
 @pytest.mark.parametrize("failure", ["504", "timeout", "invalid", "residual"])
 def test_failed_verification_never_publishes_without_retry_budget(tmp_path, failure):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     stage = "verify"
     work = setup_case(tmp_path, cap=75)
@@ -1018,7 +1019,7 @@ def test_cannot_declare_text_page_blank(tmp_path):
 def test_reserved_placeholder_rejected_before_settings(tmp_path, monkeypatch):
     work = setup_case(tmp_path, ["Synthetic [PII_NAME_1] source"])
     bridge.review(work, [])
-    from pii_pipeline.llm_config import LlmProxySettings
+    from pii_pipeline.llm.config import LlmProxySettings
 
     monkeypatch.setattr(
         LlmProxySettings,
@@ -1231,7 +1232,7 @@ def test_page_text_import_remains_the_source_with_alternate_selected(tmp_path):
 
 
 def run_traced_core(tmp_path, wire, events, texts=("Name Alice",)):
-    from pii_pipeline.llm_recovery import RecoveryPolicy
+    from pii_pipeline.recovery.process import RecoveryPolicy
 
     work = setup_case(tmp_path, list(texts), cap=200)
     bridge.review(work, [])

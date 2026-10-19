@@ -4,17 +4,17 @@ import json
 
 import pytest
 
-from pii_pipeline.llm_prompts import (
+from pii_pipeline.core.pii_types import CANONICAL_PII_TYPES, PII_TYPE_SCOPE_NOTES
+from pii_pipeline.llm.prompts import (
     build_conflict_selection_prompt,
     build_detection_prompt,
     build_occurrence_selection_prompt,
     build_verification_prompt,
 )
-from pii_pipeline.llm_schema import (
+from pii_pipeline.llm.schema import (
     build_detection_response_schema,
     build_verification_response_schema,
 )
-from pii_pipeline.pii_types import CANONICAL_PII_TYPES, PII_TYPE_SCOPE_NOTES
 
 ROLES = [build_detection_prompt, build_verification_prompt]
 
