@@ -4,7 +4,8 @@
 #   1. checks   run the test suite
 #   2. tag      read `version` from pyproject.toml and push the Git tag
 #               <version> on this commit (fails if that tag names another
-#               commit: bump the version first)
+#               commit: bump the version first) and its GitHub Release,
+#               marked Latest
 #   3. publish  push ghcr.io/softnixtech/pii-redaction-service as
 #               :<12-char SHA>, :<version> and :latest
 #
@@ -98,6 +99,19 @@ jobs:
               -m "Release $VERSION" -m "Source commit: $GITHUB_SHA" -m "Image SHA: ${GITHUB_SHA:0:12}"
             git push origin "refs/tags/$VERSION"
           fi
+      - name: Create or reuse GitHub Release
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release $VERSION already exists."
+          else
+            gh release create "$VERSION" --verify-tag --title "$VERSION" --notes-from-tag --latest
+          fi
+          echo "GitHub Release: $GITHUB_SERVER_URL/$GH_REPO/releases/tag/$VERSION" >> "$GITHUB_STEP_SUMMARY"
 
   publish:
     name: Build and publish image
