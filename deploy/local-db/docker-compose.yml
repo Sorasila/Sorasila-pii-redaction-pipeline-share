@@ -1,4 +1,5 @@
-# Local PII manifest store: Postgres + PostgREST, reachable from this machine only.
+# Local PII manifest store (Postgres + PostgREST) and the redaction service,
+# reachable from this machine only.
 # Start from this folder:  docker compose --env-file ../../.env up -d
 name: pii-local-store
 
@@ -29,9 +30,30 @@ services:
       PGRST_JWT_SECRET: ${PII_DB_JWT_SECRET:?set PII_DB_JWT_SECRET in .env}
     ports:
       - "127.0.0.1:3000:3000"
+      # The service shares this container's network (below), so its port is published here.
+      - "127.0.0.1:8080:8080"
     depends_on:
       db:
         condition: service_healthy
+
+  # The redaction service. It shares the api container's network namespace, so
+  # PII_STORE_URL=http://127.0.0.1:3000 reaches PostgREST and still passes the
+  # service's "unencrypted test manifests are stored locally only" check.
+  service:
+    build:
+      context: ../..
+    image: ${PII_SERVICE_IMAGE:-pii-redaction-service:latest}
+    restart: unless-stopped
+    env_file:
+      - ../../.env
+    environment:
+      PII_STORE_URL: http://127.0.0.1:3000
+    network_mode: "service:api"
+    read_only: true
+    stop_grace_period: 25m   # longer than PII_SERVICE_REQUEST_DEADLINE_SECONDS
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   pii_store_data:
