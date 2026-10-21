@@ -1,0 +1,8 @@
+# Project metadata. CI reads `version` to tag the release: bump it before each
+# push to main, or the publish workflow stops (the tag already names another
+# commit). Dependencies stay in requirements.txt / constraints.txt.
+[project]
+name = "dol-pii-redaction-pipeline"
+version = "1.0.0"
+description = "PII redaction service for Markdown documents (POST /redact)"
+requires-python = ">=3.13"
