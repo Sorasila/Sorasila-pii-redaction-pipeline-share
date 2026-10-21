@@ -106,12 +106,24 @@ def test_llm_proxy_settings_requires_base_url_and_api_key(
         LlmProxySettings(_env_file=None)
 
 
-def test_llm_proxy_settings_rejects_unapproved_model() -> None:
+def test_llm_proxy_settings_accepts_a_configured_model() -> None:
+    settings = LlmProxySettings(
+        base_url="https://llm-proxy.example",
+        api_key="synthetic-secret",
+        model="openai/gpt-6-luna",
+        _env_file=None,
+    )
+
+    assert settings.model == "openai/gpt-6-luna"
+
+
+@pytest.mark.parametrize("model", ["", "   "])
+def test_llm_proxy_settings_rejects_blank_model(model: str) -> None:
     with pytest.raises(ValidationError):
         LlmProxySettings(
             base_url="https://llm-proxy.example",
             api_key="synthetic-secret",
-            model="different-model",  # type: ignore[arg-type]
+            model=model,
             _env_file=None,
         )
 

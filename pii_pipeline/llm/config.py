@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, Self
+from typing import Self
 
 from pydantic import (
     AnyHttpUrl,
@@ -29,7 +29,7 @@ class LlmProxySettings(BaseSettings):
 
     base_url: AnyHttpUrl
     api_key: SecretStr
-    model: Literal["qwen/qwen3.6-27b"] = LLM_PROXY_MODEL
+    model: str = Field(default=LLM_PROXY_MODEL, min_length=1, pattern=r"\S")
     ca_bundle: FilePath | None = None
     verify_tls: bool = True
 
