@@ -182,29 +182,8 @@ when a required one is missing:
 | `PII_SERVICE_RETURN_METADATA` | `false` | Answers multipart `redacted_md` + `metadata` instead of the redacted Markdown alone |
 | `PII_SERVICE_RETURN_MANIFEST` | `false` | Adds the `pii_manifest` part (implies the metadata). Off: no manifest is built or sent, and the service starts without an encryptor (unless a store is configured) |
 | `PII_SERVICE_ALLOW_UNENCRYPTED_TEST_MANIFEST` | `false` | The only way to run before the encryption design exists. The manifest part is then a JWE-shaped envelope with `kid` `UNENCRYPTED-TEST-ONLY` whose `ciphertext` is the **plaintext** manifest. Test machines only |
-| `PII_STORE_URL` | unset | **Off by default; the intended production setup stores no PII** (the manifest leaves only in the response). Prepared for a future approved database: a PostgREST base URL with an insert-only `pii_manifests` table. When set, each delivery's manifest envelope, metadata, key id and `redacted_md_sha256` are stored before the response; a failed store fails the request (502, `reason=ManifestStoreError:<code>`). With the unencrypted test manifest the URL must be this machine (`127.0.0.1`, `localhost`, `::1`). Read only by the uvicorn factory, never when the app is built with explicit settings. [deploy/local-db/](../deploy/local-db/) runs one on this machine (below) |
+| `PII_STORE_URL` | unset | **Off by default; the intended production setup stores no PII** (the manifest leaves only in the response). Prepared for a future approved database: a PostgREST base URL with an insert-only `pii_manifests` table. When set, each delivery's manifest envelope, metadata, key id and `redacted_md_sha256` are stored before the response; a failed store fails the request (502, `reason=ManifestStoreError:<code>`). With the unencrypted test manifest the URL must be this machine (`127.0.0.1`, `localhost`, `::1`). Read only by the uvicorn factory, never when the app is built with explicit settings. No store runs with this service: it redacts and hands the result to sdp-knowledge-center |
 | `PII_STORE_TOKEN` | required with `PII_STORE_URL` | Bearer JWT of the store's insert-only writer role |
-
-**Local manifest store (test setup).** Turning a store on keeps PII after the
-response, which the production design avoids; before using a real database it
-needs a real manifest encryptor, retention and deletion (rows here never
-expire), access control and a PDPA review. `deploy/local-db/` runs Postgres 16 and PostgREST
-v12.2.3 with Docker; only PostgREST is published, on `127.0.0.1:3000`. The
-schema (`init/001_schema.sql`) has one table, `api.pii_manifests`, and an
-insert-only role `pii_writer`: the service cannot read, change or delete rows,
-and nothing expires during the test phase. Set in `.env` `PII_DB_ADMIN_PASSWORD`,
-`PII_DB_AUTHENTICATOR_PASSWORD`, `PII_DB_JWT_SECRET` (32+ characters),
-`PII_STORE_TOKEN` (an HS256 JWT signed with that secret, payload
-`{"role": "pii_writer"}`) and `PII_STORE_URL=http://127.0.0.1:3000`, then from
-`deploy/local-db`:
-
-```powershell
-docker compose --env-file ..\..\.env up -d
-docker compose --env-file ..\..\.env exec db psql -U pii_admin -d pii -c "select count(*) from api.pii_manifests;"
-```
-
-The init scripts run only on an empty volume (`down -v` deletes all stored
-rows). `init/002_roles.sh` must keep LF line endings.
 
 The service also uses `LLM_PROXY_MAX_RETRIES` (default 2), so a proxy 504 can be
 retried at the transport level; the private test runner used 0.

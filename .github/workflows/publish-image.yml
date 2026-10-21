@@ -6,12 +6,11 @@
 #               <version> on this commit (fails if that tag names another
 #               commit: bump the version first)
 #   3. publish  push ghcr.io/softnixtech/pii-redaction-service as
-#               :<12-char SHA>, :<version> and :latest, and copy the local
-#               store's api (PostgREST) to ghcr.io/softnixtech/pii-store-api
-#               under the same tags
+#               :<12-char SHA>, :<version> and :latest
 #
-# Deploy pulls with `docker login ghcr.io` (a token with read:packages), then
-# PII_SERVICE_IMAGE=ghcr.io/softnixtech/pii-redaction-service:<tag>
+# Deploy: `docker login ghcr.io` (a token with read:packages), then
+# `docker compose pull && docker compose up -d`; docker-compose.yml names the
+# :latest image.
 name: CI, tag and publish
 
 on:
@@ -110,8 +109,6 @@ jobs:
       packages: write
     env:
       IMAGE_REPO: ghcr.io/softnixtech/pii-redaction-service
-      API_IMAGE_REPO: ghcr.io/softnixtech/pii-store-api
-      API_SOURCE_IMAGE: postgrest/postgrest:v12.2.3
       VERSION: ${{ needs.tag.outputs.version }}
       TAG: ${{ needs.tag.outputs.image_tag }}
     steps:
@@ -140,18 +137,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # The local store's api (PostgREST) has no code of ours: the upstream
-      # image is copied as is, under the same tags as the service.
-      - name: Copy store api image
-        run: |
-          set -euo pipefail
-          docker buildx imagetools create \
-            --tag "$API_IMAGE_REPO:$TAG" \
-            --tag "$API_IMAGE_REPO:$VERSION" \
-            --tag "$API_IMAGE_REPO:latest" \
-            "$API_SOURCE_IMAGE"
-
-      - name: Summarize published images
+      - name: Summarize published image
         run: |
           {
             echo "### Published $VERSION (build $TAG)"
@@ -159,8 +145,4 @@ jobs:
             echo "$IMAGE_REPO:$TAG"
             echo "$IMAGE_REPO:$VERSION"
             echo "$IMAGE_REPO:latest"
-            echo
-            echo "$API_IMAGE_REPO:$TAG (from $API_SOURCE_IMAGE)"
-            echo "$API_IMAGE_REPO:$VERSION"
-            echo "$API_IMAGE_REPO:latest"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -4,8 +4,8 @@
 #   curl -s http://127.0.0.1:8090/readyz
 #
 # The image comes from GHCR (published by .github/workflows/publish-image.yml).
-# Pin a release with PII_SERVICE_IMAGE=ghcr.io/softnixtech/pii-redaction-service:<version>
-# in .env, or build from this checkout instead: docker compose up -d --build
+# Pin a release by changing :latest to :<version>, or build from this checkout
+# instead: docker compose up -d --build
 #
 # Settings and secrets come from .env (copy .env.example; never commit it).
 # Host port defaults to 8090 so it does not clash with sdp-knowledge-center
@@ -16,14 +16,14 @@ name: pii-redaction
 services:
   pii-redaction:
     build: .
-    image: ${PII_SERVICE_IMAGE:-ghcr.io/softnixtech/pii-redaction-service:latest}
+    image: ghcr.io/softnixtech/pii-redaction-service:latest
     ports:
       - "127.0.0.1:${PII_SERVICE_HOST_PORT:-8090}:8080"
     env_file:
       - .env
     environment:
-      # 127.0.0.1 in .env is the host's local store, unreachable from the
-      # container: store nothing here.
+      # The service redacts and hands the result to sdp-knowledge-center; it
+      # keeps nothing, so no manifest store runs or is used here.
       PII_STORE_URL: ""
     read_only: true
     stop_grace_period: 25m   # longer than PII_SERVICE_REQUEST_DEADLINE_SECONDS
