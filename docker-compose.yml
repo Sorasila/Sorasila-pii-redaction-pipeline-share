@@ -1,0 +1,25 @@
+# PII redaction service (POST /redact).
+#   docker compose up -d --build
+#   curl -s http://127.0.0.1:8090/readyz
+#
+# Settings and secrets come from .env (copy .env.example; never commit it).
+# Host port defaults to 8090 so it does not clash with sdp-knowledge-center
+# (port 80) or other local stacks on 8000/8001/8088/8091. Override with
+# PII_SERVICE_HOST_PORT in .env.
+name: pii-redaction
+
+services:
+  pii-redaction:
+    build: .
+    image: pii-redaction-service:latest
+    ports:
+      - "127.0.0.1:${PII_SERVICE_HOST_PORT:-8090}:8080"
+    env_file:
+      - .env
+    environment:
+      # 127.0.0.1 in .env is the host's local store, unreachable from the
+      # container: store nothing here.
+      PII_STORE_URL: ""
+    read_only: true
+    stop_grace_period: 25m   # longer than PII_SERVICE_REQUEST_DEADLINE_SECONDS
+    restart: unless-stopped
