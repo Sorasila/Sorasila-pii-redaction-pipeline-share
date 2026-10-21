@@ -22,7 +22,8 @@ services:
       retries: 20
 
   api:
-    image: postgrest/postgrest:v12.2.3
+    # postgrest/postgrest:v12.2.3, copied to GHCR by the publish workflow.
+    image: ${PII_STORE_API_IMAGE:-ghcr.io/softnixtech/pii-store-api:latest}
     restart: unless-stopped
     environment:
       PGRST_DB_URI: postgres://authenticator:${PII_DB_AUTHENTICATOR_PASSWORD}@db:5432/pii
@@ -42,7 +43,8 @@ services:
   service:
     build:
       context: ../..
-    image: ${PII_SERVICE_IMAGE:-pii-redaction-service:latest}
+    # From GHCR (docker login ghcr.io first); pin with PII_SERVICE_IMAGE=...:<version>.
+    image: ${PII_SERVICE_IMAGE:-ghcr.io/softnixtech/pii-redaction-service:latest}
     restart: unless-stopped
     env_file:
       - ../../.env

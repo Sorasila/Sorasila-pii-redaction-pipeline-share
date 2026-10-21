@@ -3,6 +3,6 @@
 # commit). Dependencies stay in requirements.txt / constraints.txt.
 [project]
 name = "dol-pii-redaction-pipeline"
-version = "1.0.0"
+version = "1.0.1"
 description = "PII redaction service for Markdown documents (POST /redact)"
 requires-python = ">=3.13"

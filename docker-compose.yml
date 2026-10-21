@@ -1,6 +1,11 @@
 # PII redaction service (POST /redact).
-#   docker compose up -d --build
+#   docker login ghcr.io            # token with read:packages
+#   docker compose pull && docker compose up -d
 #   curl -s http://127.0.0.1:8090/readyz
+#
+# The image comes from GHCR (published by .github/workflows/publish-image.yml).
+# Pin a release with PII_SERVICE_IMAGE=ghcr.io/softnixtech/pii-redaction-service:<version>
+# in .env, or build from this checkout instead: docker compose up -d --build
 #
 # Settings and secrets come from .env (copy .env.example; never commit it).
 # Host port defaults to 8090 so it does not clash with sdp-knowledge-center
@@ -11,7 +16,7 @@ name: pii-redaction
 services:
   pii-redaction:
     build: .
-    image: pii-redaction-service:latest
+    image: ${PII_SERVICE_IMAGE:-ghcr.io/softnixtech/pii-redaction-service:latest}
     ports:
       - "127.0.0.1:${PII_SERVICE_HOST_PORT:-8090}:8080"
     env_file:
