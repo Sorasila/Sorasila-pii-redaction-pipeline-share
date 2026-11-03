@@ -3,8 +3,9 @@
 Run with:  uvicorn pii_pipeline.service:create_service_app --factory
 
 The composition matches the reviewed test runner: the approved Thai rule lane,
-the LLM lane with automatic recovery, whole-request windows (input is at most
-one page of 2000 code points) and a finite whole-request deadline.
+the LLM lane with automatic recovery, whole-request windows (one whole page of
+at most PII_SERVICE_MAX_SOURCE_CHARACTERS code points goes to the LLM in one
+call) and a finite whole-request deadline.
 
 Settings come from the environment (or .env) with the PII_SERVICE_ prefix; the
 LLM proxy keeps its own LLM_PROXY_ settings. There is no open default: the
@@ -31,6 +32,7 @@ from ..llm.windows import TextWindow, make_text_window
 from ..recovery.process import RecoveryPolicy
 from ..rules.thai import detect_thai_rule_pii
 from .docs_login import DocsLogin
+from .document_input import DEFAULT_MAX_SOURCE_CHARACTERS
 from .http import Authenticator, create_app
 from .manifest_store import ManifestStoreSettings, PostgrestManifestStore, is_local_url
 
@@ -56,9 +58,14 @@ class ServiceSettings(BaseSettings):
 
     # Provisional caller authentication until the integration scheme is agreed.
     api_token: SecretStr = Field(min_length=32)
-    # Covers the slowest page measured on the test LLM machine (1036 s).
+    # Long on purpose (user decision 2026-11-03): a whole page goes to the LLM
+    # in one call, so the request waits for it instead of giving up.
     request_deadline_seconds: float = Field(
-        default=1200, gt=0, le=86_400, allow_inf_nan=False
+        default=7200, gt=0, le=86_400, allow_inf_nan=False
+    )
+    # Largest accepted page in Unicode code points (user decision 2026-11-03).
+    max_source_characters: int = Field(
+        default=DEFAULT_MAX_SOURCE_CHARACTERS, gt=0, le=1_000_000
     )
     # Encryption design is deferred; this explicit flag is the only way to run
     # without a real encryptor and must never be set in production.
@@ -144,7 +151,7 @@ def _enable_request_log() -> None:
 
 
 def _whole(text: str) -> list[TextWindow]:
-    # A request is at most one page, so one window covers it.
+    # A request is one whole page, sent to the LLM as one window.
     return [make_text_window(text, 0, len(text))]
 
 
@@ -225,6 +232,7 @@ def create_service_app(
         encrypt_manifest=encryptor,
         authenticate=bearer_authenticator(settings.api_token, docs_login),
         request_deadline_seconds=settings.request_deadline_seconds,
+        max_source_characters=settings.max_source_characters,
         store_manifest=store.put if store else None,
         return_manifest=settings.return_manifest,
         return_metadata=settings.return_metadata or settings.return_manifest,

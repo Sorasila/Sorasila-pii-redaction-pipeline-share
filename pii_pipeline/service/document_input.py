@@ -4,8 +4,10 @@ import re
 
 from starlette.requests import ClientDisconnect, Request
 
-MAX_SOURCE_CHARACTERS = 2000
-MAX_SOURCE_BYTES = MAX_SOURCE_CHARACTERS * 4
+# One whole page per request; PII_SERVICE_MAX_SOURCE_CHARACTERS overrides it.
+DEFAULT_MAX_SOURCE_CHARACTERS = 10_000
+# UTF-8 needs at most 4 bytes per code point.
+_BYTES_PER_CHARACTER = 4
 
 
 class InputRejected(Exception):
@@ -17,7 +19,7 @@ class InputRejected(Exception):
         self.code = code
 
 
-def _validate_request_headers(request: Request) -> None:
+def _validate_request_headers(request: Request, max_bytes: int) -> None:
     content_type = request.headers.get("content-type", "")
     parameters = content_type.split(";")
     if parameters[0].strip().lower() not in {"text/plain", "text/markdown"}:
@@ -46,22 +48,23 @@ def _validate_request_headers(request: Request) -> None:
         # Comparing the canonical decimal text avoids converting an unbounded
         # attacker-controlled integer. The actual stream remains independently bounded.
         canonical_length = declared_length.lstrip("0") or "0"
-        limit = str(MAX_SOURCE_BYTES)
+        limit = str(max_bytes)
         if len(canonical_length) > len(limit) or (
             len(canonical_length) == len(limit) and canonical_length > limit
         ):
             raise InputRejected(413, "document_too_large")
 
 
-async def read_document(request: Request) -> str:
+async def read_document(request: Request, max_characters: int) -> str:
     """The page text, or InputRejected (400, 413 or 415)."""
-    _validate_request_headers(request)
+    max_bytes = max_characters * _BYTES_PER_CHARACTER
+    _validate_request_headers(request, max_bytes)
     chunks: list[bytes] = []
     size = 0
     try:
         async for chunk in request.stream():
             size += len(chunk)
-            if size > MAX_SOURCE_BYTES:
+            if size > max_bytes:
                 raise InputRejected(413, "document_too_large")
             chunks.append(chunk)
     except ClientDisconnect:
@@ -71,7 +74,7 @@ async def read_document(request: Request) -> str:
     except UnicodeDecodeError:
         raise InputRejected(400, "invalid_request") from None
     # Count source Unicode codepoints before the core's required NFC normalization.
-    if len(markdown) > MAX_SOURCE_CHARACTERS:
+    if len(markdown) > max_characters:
         raise InputRejected(413, "document_too_large")
     if not markdown.strip():
         raise InputRejected(400, "invalid_request")

@@ -73,10 +73,10 @@ def test_settings_defaults_and_env_prefixes_are_frozen():
         "ca_bundle": None,
         "verify_tls": True,
         "connect_timeout_seconds": 10,
-        "read_timeout_seconds": 300,
+        "read_timeout_seconds": 1800,
         "write_timeout_seconds": 30,
         "pool_timeout_seconds": 10,
-        "request_deadline_seconds": 600,
+        "request_deadline_seconds": 3600,
         "max_retries": 2,
         "retry_backoff_seconds": 1,
         "retry_backoff_cap_seconds": 10,
@@ -87,7 +87,8 @@ def test_settings_defaults_and_env_prefixes_are_frozen():
         name: field.default for name, field in ServiceSettings.model_fields.items()
     }
     assert {k: v for k, v in service.items() if k != "api_token"} == {
-        "request_deadline_seconds": 1200,
+        "request_deadline_seconds": 7200,
+        "max_source_characters": 10000,
         "allow_unencrypted_test_manifest": False,
         "return_manifest": False,
         "return_metadata": False,

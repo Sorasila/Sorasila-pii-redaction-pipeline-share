@@ -34,10 +34,12 @@ class LlmProxySettings(BaseSettings):
     verify_tls: bool = True
 
     connect_timeout_seconds: float = Field(default=10, gt=0, allow_inf_nan=False)
-    read_timeout_seconds: float = Field(default=300, gt=0, allow_inf_nan=False)
+    # Long on purpose (user decision 2026-11-03): a whole page can keep the
+    # model busy for many minutes; wait for it rather than retry early.
+    read_timeout_seconds: float = Field(default=1800, gt=0, allow_inf_nan=False)
     write_timeout_seconds: float = Field(default=30, gt=0, allow_inf_nan=False)
     pool_timeout_seconds: float = Field(default=10, gt=0, allow_inf_nan=False)
-    request_deadline_seconds: float = Field(default=600, gt=0, allow_inf_nan=False)
+    request_deadline_seconds: float = Field(default=3600, gt=0, allow_inf_nan=False)
     max_retries: int = Field(default=2, ge=0, le=2)
     retry_backoff_seconds: float = Field(default=1, gt=0, allow_inf_nan=False)
     retry_backoff_cap_seconds: float = Field(default=10, gt=0, allow_inf_nan=False)

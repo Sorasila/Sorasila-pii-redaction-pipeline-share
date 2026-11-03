@@ -13,7 +13,7 @@ This is a unit-tested prototype, not a production-ready service.
 ## How a request is processed
 
 ```text
-raw Markdown (≤2000 code points)
+raw Markdown, one whole page (≤ PII_SERVICE_MAX_SOURCE_CHARACTERS, default 10000 code points)
   │  NFC normalization; reject text that already contains [PII_…] placeholders
   ▼
 detection ──┬── rule lane: deterministic regex rules on the original text
@@ -127,8 +127,8 @@ environment or `.env` (ignored by Git). [.env.example](../.env.example) lists th
 | `LLM_PROXY_MODEL` | `qwen/qwen3.6-27b` | Only accepted model |
 | `LLM_PROXY_CA_BUNDLE` | unset | Extra trusted CA for the proxy |
 | `LLM_PROXY_VERIFY_TLS` | `true` | See the TLS exception below |
-| `LLM_PROXY_CONNECT/READ/WRITE/POOL_TIMEOUT_SECONDS` | 10 / 300 / 30 / 10 | Per-attempt phase timeouts (read 300 → 400 on 2026-10-05; 300 again since 2026-10-16: replies that succeed have taken up to about 290 s, and two full attempts fit in the 600 s call deadline). The log's `attempt_seconds` shows each attempt's time for tuning it |
-| `LLM_PROXY_REQUEST_DEADLINE_SECONDS` | 600 | Deadline per LLM call, including retries |
+| `LLM_PROXY_CONNECT/READ/WRITE/POOL_TIMEOUT_SECONDS` | 10 / 1800 / 30 / 10 | Per-attempt phase timeouts (read 300 → 400 on 2026-10-05; 300 again on 2026-10-16, when replies for 2000-character pages took up to about 290 s; 1800 since 2026-11-03, when a request became one whole page sent in one call and the user chose to wait for the model rather than give up). The log's `attempt_seconds` shows each attempt's time for tuning it |
+| `LLM_PROXY_REQUEST_DEADLINE_SECONDS` | 3600 | Deadline per LLM call, including retries (600 until 2026-11-03) |
 | `LLM_PROXY_MAX_RETRIES` | 2 (0–2) | Retries for transient 5xx/network errors only |
 | `LLM_PROXY_DETECTION_USE_THINKING`, `LLM_PROXY_VERIFICATION_USE_THINKING` | `false` | Model thinking per role |
 
@@ -144,7 +144,8 @@ defaults for any of them. Every request goes through automatic recovery.
 
 `pii_pipeline.service.create_service_app` composes the adapter the same way the
 test runner does: the Thai rule lane, the LLM lane with automatic recovery, one
-window per request and a whole-request deadline.
+window per request (the whole page goes to the LLM in one call) and a
+whole-request deadline.
 
 ```bash
 uvicorn pii_pipeline.service:create_service_app --factory --host 127.0.0.1 --port 8080
@@ -178,7 +179,8 @@ when a required one is missing:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PII_SERVICE_API_TOKEN` | required (32+ characters) | Provisional caller authentication: `Authorization: Bearer <token>` until the integration scheme is agreed |
-| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | 1200 | Whole-request deadline, also used as the recovery deadline (covers the slowest page measured on the test LLM, 1036 s) |
+| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | 7200 | Whole-request deadline, also used as the recovery deadline (1200 until 2026-11-03, covering the slowest 2000-character page measured on the test LLM, 1036 s; longer whole pages are not measured yet) |
+| `PII_SERVICE_MAX_SOURCE_CHARACTERS` | 10000 | Largest accepted page in Unicode code points, counted before NFC normalization; longer bodies get 413 `document_too_large` (2000 until 2026-11-03) |
 | `PII_SERVICE_RETURN_METADATA` | `false` | Answers multipart `redacted_md` + `metadata` instead of the redacted Markdown alone |
 | `PII_SERVICE_RETURN_MANIFEST` | `false` | Adds the `pii_manifest` part (implies the metadata). Off: no manifest is built or sent, and the service starts without an encryptor (unless a store is configured) |
 | `PII_SERVICE_ALLOW_UNENCRYPTED_TEST_MANIFEST` | `false` | The only way to run before the encryption design exists. The manifest part is then a JWE-shaped envelope with `kid` `UNENCRYPTED-TEST-ONLY` whose `ciphertext` is the **plaintext** manifest. Test machines only |
@@ -347,7 +349,8 @@ with the cause of any failure. Compare the output with the expected values in
 - **Page tools** (stdout carries counts and statuses only; every output folder
   must be new and outside Git):
   - `tools/split_md_pages.py <doc.md> --output-dir <dir>` splits a long document
-    into files of at most 2000 code points, cutting at a blank line, then a line
+    into files of at most `--max-chars` code points (default 10000, the service
+    default), cutting at a blank line, then a line
     end, then whitespace, and only then inside a word; the files concatenate back
     to the input exactly. Send them with `tools/redact_client.py`.
   - `tools/plan_windows_from_pages.py <work-dir>` writes a window plan with the

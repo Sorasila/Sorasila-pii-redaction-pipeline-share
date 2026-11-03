@@ -1,6 +1,7 @@
 # PII Redaction Service: การรันและตั้งค่าใน Docker
 
-Service รับข้อความ Markdown ภาษาไทยที่ได้จาก OCR (ไม่เกิน 2000 ตัวอักษรต่อ request)
+Service รับข้อความ Markdown ภาษาไทยที่ได้จาก OCR ทั้งหน้า (ค่าเริ่มต้นไม่เกิน 10000 ตัวอักษรต่อ request
+ปรับได้ด้วย `PII_SERVICE_MAX_SOURCE_CHARACTERS`) ส่งให้ LLM ทั้งหน้าในครั้งเดียว
 หา PII แล้วแทนด้วย placeholder เช่น `[PII_NAME_1]` ตรวจซ้ำว่าไม่เหลือ PII
 แล้วตอบข้อความที่ปิดแล้วกลับไปใน request เดิม ถ้าตรวจไม่ผ่านจะตอบ error ตลอด
 ไม่มีผลบางส่วนหลุดออกไป
@@ -10,7 +11,7 @@ Service รับข้อความ Markdown ภาษาไทยที่�
 [การทำงานและขอบเขต PII](docs/OVERVIEW.md) ·
 [รันบนเครื่องโดยไม่ใช้ Docker](docs/SETUP_AND_USAGE.md)
 
-> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1303, harness 79) และทดสอบกับ LLM
+> สถานะ: prototype ที่ผ่านเทสต์อัตโนมัติ (core 1334, harness 79) และทดสอบกับ LLM
 > เครื่องทดสอบแล้ว **Dockerfile และตัวอย่าง Compose/Kubernetes ด้านล่างเป็นตัวอย่างอ้างอิง
 > ยังไม่ได้ทดสอบบนแพลตฟอร์มจริง** ปรับตามกติกาของแพลตฟอร์มได้
 
@@ -83,11 +84,12 @@ Service อ่านค่าจาก environment ของ container ถ้า
 
 | ตัวแปร | ค่าเริ่มต้น | ใช้เมื่อ |
 | --- | --- | --- |
-| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | `1200` | เวลาสูงสุดต่อ request ครบแล้วตอบ 504 ต้องไม่ยาวกว่า timeout ของ gateway (ข้อ 5) |
+| `PII_SERVICE_MAX_SOURCE_CHARACTERS` | `10000` | ความยาวสูงสุดของหน้าที่รับ (Unicode code point) ยาวกว่านี้ตอบ 413 ทั้งหน้าส่งให้ LLM ในครั้งเดียว หน้ายิ่งยาว LLM ยิ่งใช้เวลานาน |
+| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | `7200` | เวลาสูงสุดต่อ request (2 ชั่วโมง) ครบแล้วตอบ 504 ตั้งไว้ยาวเพื่อรอ LLM ทำทั้งหน้าจนเสร็จ ทุกชั้นที่อยู่หน้า service ต้องรอได้นานกว่านี้ (ข้อ 5) |
 | `LLM_PROXY_VERIFY_TLS` | `true` | ตั้ง `false` **เฉพาะ** เมื่อใช้ข้อยกเว้น TLS ของ proxy ที่อนุมัติไว้ (ไม่ตรวจ certificate ของ proxy; ยังเป็น HTTPS) |
 | `LLM_PROXY_CA_BUNDLE` | ไม่ตั้ง | path ของไฟล์ CA ภายในองค์กร (mount ไฟล์เข้า container แบบอ่านอย่างเดียว) ใช้แทนการปิด TLS |
-| `LLM_PROXY_READ_TIMEOUT_SECONDS` | `300` | รอคำตอบจาก proxy ต่อครั้ง |
-| `LLM_PROXY_REQUEST_DEADLINE_SECONDS` | `600` | เวลาสูงสุดต่อการเรียก LLM หนึ่งครั้ง รวมการลองใหม่ |
+| `LLM_PROXY_READ_TIMEOUT_SECONDS` | `1800` | รอคำตอบจาก proxy ต่อครั้ง (30 นาที) |
+| `LLM_PROXY_REQUEST_DEADLINE_SECONDS` | `3600` | เวลาสูงสุดต่อการเรียก LLM หนึ่งครั้ง รวมการลองใหม่ (60 นาที) |
 | `LLM_PROXY_MAX_RETRIES` | `2` | ลองใหม่เมื่อ proxy ตอบ 502/503/504 หรือการเชื่อมต่อหลุด (0–2) |
 | `LLM_PROXY_CONNECT_TIMEOUT_SECONDS`, `..._WRITE_...`, `..._POOL_...` | `10`, `30`, `10` | timeout ย่อยต่อครั้ง |
 | `PII_SERVICE_RETURN_METADATA` | `false` | `true` = ตอบ multipart `redacted_md` + `metadata` แทนข้อความล้วน |
@@ -102,7 +104,7 @@ Service อ่านค่าจาก environment ของ container ถ้า
 LLM_PROXY_BASE_URL=https://llm-proxy.example.internal:9001
 LLM_PROXY_API_KEY=<ใส่จาก secret store>
 PII_SERVICE_API_TOKEN=<สุ่มใหม่ อย่างน้อย 32 ตัว>
-PII_SERVICE_REQUEST_DEADLINE_SECONDS=1200
+PII_SERVICE_REQUEST_DEADLINE_SECONDS=7200
 # LLM_PROXY_VERIFY_TLS=false        # เฉพาะเมื่อใช้ข้อยกเว้น TLS
 # LLM_PROXY_CA_BUNDLE=/run/certs/internal-ca.pem
 ```
@@ -143,7 +145,7 @@ services:
     env_file:
       - /srv/pii-redaction/service.env   # อยู่บนเซิร์ฟเวอร์ ไม่อยู่ใน repo หรือ image
     read_only: true
-    stop_grace_period: 25m               # ยาวกว่า PII_SERVICE_REQUEST_DEADLINE_SECONDS
+    stop_grace_period: 125m              # ยาวกว่า PII_SERVICE_REQUEST_DEADLINE_SECONDS
     restart: unless-stopped
 ```
 
@@ -153,7 +155,7 @@ Health check ใช้ `HEALTHCHECK` ที่อยู่ใน Dockerfile แ�
 
 ```yaml
 spec:
-  terminationGracePeriodSeconds: 1500    # ยาวกว่า PII_SERVICE_REQUEST_DEADLINE_SECONDS
+  terminationGracePeriodSeconds: 7500    # ยาวกว่า PII_SERVICE_REQUEST_DEADLINE_SECONDS
   containers:
     - name: pii-redaction
       image: <registry>/pii-redaction-service:<tag>
@@ -181,8 +183,9 @@ spec:
 
 ## 5. Timeout และ request ที่ใช้เวลานาน (สำคัญ)
 
-- **request หนึ่งใช้เวลาหลายนาที** บนเครื่อง LLM ทดสอบ: ปกติ 1–6 นาที ช้าสุดที่วัดได้ราว
-  20 นาที เวลาเกือบทั้งหมดคือรอ LLM (ต้องวัดซ้ำบนเครื่อง LLM production)
+- **request หนึ่งใช้เวลาหลายนาที** บนเครื่อง LLM ทดสอบ: หน้าละไม่เกิน 2000 ตัวอักษร ปกติ 1–6 นาที
+  ช้าสุดที่วัดได้ราว 20 นาที หน้าที่ยาวกว่านี้ส่งให้ LLM ในครั้งเดียวและยังไม่ได้วัดเวลา คาดว่านานขึ้นตามความยาว
+  เวลาเกือบทั้งหมดคือรอ LLM (ต้องวัดซ้ำบนเครื่อง LLM production)
 - **ทุกชั้นระหว่างผู้เรียกกับ container** (HTTP client, gateway, reverse proxy, ingress,
   load balancer) ต้องรอได้นานกว่า `PII_SERVICE_REQUEST_DEADLINE_SECONDS` หลายตัวมี
   ค่าเริ่มต้นแค่ 60 วินาที ชั้นที่สั้นที่สุดจะตัด request ก่อน
@@ -203,7 +206,7 @@ spec:
 POST /redact
 Content-Type: text/markdown; charset=utf-8   (หรือ text/plain; charset=utf-8)
 Authorization: Bearer <PII_SERVICE_API_TOKEN>
-body: ข้อความ UTF-8 ดิบ ไม่เกิน 2000 ตัวอักษร (Unicode code point) ไม่ห่อด้วย JSON
+body: ข้อความ UTF-8 ดิบ ทั้งหน้า ไม่เกิน PII_SERVICE_MAX_SOURCE_CHARACTERS (ค่าเริ่มต้น 10000) ตัวอักษร (Unicode code point) ไม่ห่อด้วย JSON
 ```
 
 | ผล | สิ่งที่ได้ |
@@ -214,7 +217,7 @@ body: ข้อความ UTF-8 ดิบ ไม่เกิน 2000 ตัว
 | 502 | `processing_failed`: ตรวจจับหรือตรวจซ้ำไม่ผ่าน (รวมกรณี LLM ใช้งานไม่ได้) |
 | 504 | `request_timeout`: ครบ `PII_SERVICE_REQUEST_DEADLINE_SECONDS` |
 
-- เอกสารยาวกว่า 2000 ตัวอักษร ผู้เรียกต้องแบ่งเป็นหลาย request
+- เอกสารยาวกว่า `PII_SERVICE_MAX_SOURCE_CHARACTERS` ผู้เรียกต้องแบ่งเป็นหลาย request
   (ตัวช่วย: `tools/split_md_pages.py`) แต่ละ request อิสระ placeholder นับใหม่ทุก request
 - `X-Document-Id` และ `document_id` ใน error ตรงกับ log ใช้ติดตามปัญหา
 - รายละเอียดเต็ม: [docs/http-contract.md](docs/http-contract.md)
@@ -259,7 +262,7 @@ docker run --rm -p 8080:8080 --env-file /srv/pii-redaction/service.env -e PII_SE
 - token ที่ใส่ใน **Authorize** คือ `PII_SERVICE_API_TOKEN` ของ container นั้น ขอจากผู้ดูแลระบบ
 - `/docs` และ `/openapi.json` เปิดดูได้โดยไม่ต้องใช้ token (เห็นแค่รูปแบบ API) ถ้า staging เข้าถึงได้จากวงกว้าง ควรจำกัดเครือข่ายที่เข้า `/docs` ได้
 - Execute ที่ `POST /redact` **เรียก LLM จริง** ใช้เวลาหลายนาที และใช้เครื่อง LLM ร่วมกับผู้ใช้อื่น ใช้ข้อความสังเคราะห์เท่านั้น
-- ข้อผิดพลาดที่ตอบทันทีโดยไม่เรียก LLM: token ผิด (401), body ว่าง (400), ยาวเกิน 2000 ตัวอักษร (413)
+- ข้อผิดพลาดที่ตอบทันทีโดยไม่เรียก LLM: token ผิด (401), body ว่าง (400), ยาวเกิน `PII_SERVICE_MAX_SOURCE_CHARACTERS` (413)
 
 ---
 

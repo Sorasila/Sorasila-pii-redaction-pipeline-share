@@ -26,5 +26,5 @@ services:
       # keeps nothing, so no manifest store runs or is used here.
       PII_STORE_URL: ""
     read_only: true
-    stop_grace_period: 25m   # longer than PII_SERVICE_REQUEST_DEADLINE_SECONDS
+    stop_grace_period: 125m   # longer than PII_SERVICE_REQUEST_DEADLINE_SECONDS
     restart: unless-stopped

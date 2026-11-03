@@ -45,8 +45,7 @@ from .delivery import (
 )
 from .docs_login import DocsLogin
 from .document_input import (
-    MAX_SOURCE_BYTES,
-    MAX_SOURCE_CHARACTERS,
+    DEFAULT_MAX_SOURCE_CHARACTERS,
     InputRejected,
     read_document,
 )
@@ -56,8 +55,7 @@ from .request_log import log_outcome, safe_reason
 logger = logging.getLogger("pii_pipeline.service")
 
 __all__ = [
-    "MAX_SOURCE_BYTES",
-    "MAX_SOURCE_CHARACTERS",
+    "DEFAULT_MAX_SOURCE_CHARACTERS",
     "Authenticator",
     "HttpApiConfigurationError",
     "create_app",
@@ -119,58 +117,74 @@ _TOKEN_OPENAPI = {
     },
 }
 
-_REDACT_OPENAPI = {
-    "requestBody": {
-        "required": True,
-        "description": (
-            "Raw UTF-8 Markdown or text, at most 2000 Unicode code points, "
-            "not wrapped in JSON."
-        ),
-        "content": {
-            "text/markdown": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
-            "text/plain": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
-        },
-    },
-    "security": [{"bearerAuth": []}],
-    "responses": {
-        "200": {
+
+def _redact_openapi(max_source_characters: int) -> dict:
+    return {
+        "requestBody": {
+            "required": True,
             "description": (
-                "Redacted text. By default the body is the redacted Markdown; "
-                "with PII_SERVICE_RETURN_METADATA (or _MANIFEST) it is "
-                "multipart/form-data with redacted_md and metadata (and "
-                "pii_manifest). X-Document-Id matches the request log line."
+                f"Raw UTF-8 Markdown or text, at most {max_source_characters} "
+                "Unicode code points, not wrapped in JSON."
             ),
-            "headers": {
-                "X-Document-Id": {"schema": {"type": "string", "format": "uuid"}}
-            },
             "content": {
-                "text/markdown": {"schema": {"type": "string"}},
-                "multipart/form-data": {"schema": {"type": "object"}},
+                "text/markdown": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
+                "text/plain": {"schema": {"type": "string"}, "example": _SAMPLE_PAGE},
             },
         },
-        **{
-            str(code): {
-                "description": text,
-                "content": {
-                    "application/json": {
-                        "schema": {"$ref": "#/components/schemas/Error"}
-                    }
-                },
-            }
-            for code, text in (
-                (
-                    400,
-                    "invalid_request: empty, not UTF-8, or already holds [PII_...] placeholders",
+        "security": [{"bearerAuth": []}],
+        "responses": {
+            "200": {
+                "description": (
+                    "Redacted text. By default the body is the redacted Markdown; "
+                    "with PII_SERVICE_RETURN_METADATA (or _MANIFEST) it is "
+                    "multipart/form-data with redacted_md and metadata (and "
+                    "pii_manifest). X-Document-Id matches the request log line."
                 ),
-                (401, "authentication_failed: missing or wrong Bearer token"),
-                (413, "document_too_large: more than 2000 code points"),
-                (415, "unsupported_media_type: use text/markdown or text/plain, UTF-8"),
-                (502, "processing_failed: detection or verification did not succeed"),
-                (504, "request_timeout: PII_SERVICE_REQUEST_DEADLINE_SECONDS reached"),
-            )
+                "headers": {
+                    "X-Document-Id": {"schema": {"type": "string", "format": "uuid"}}
+                },
+                "content": {
+                    "text/markdown": {"schema": {"type": "string"}},
+                    "multipart/form-data": {"schema": {"type": "object"}},
+                },
+            },
+            **{
+                str(code): {
+                    "description": text,
+                    "content": {
+                        "application/json": {
+                            "schema": {"$ref": "#/components/schemas/Error"}
+                        }
+                    },
+                }
+                for code, text in (
+                    (
+                        400,
+                        "invalid_request: empty, not UTF-8, or already holds [PII_...] placeholders",
+                    ),
+                    (401, "authentication_failed: missing or wrong Bearer token"),
+                    (
+                        413,
+                        f"document_too_large: more than {max_source_characters} code points",
+                    ),
+                    (
+                        415,
+                        "unsupported_media_type: use text/markdown or text/plain, UTF-8",
+                    ),
+                    (
+                        502,
+                        "processing_failed: detection or verification did not succeed",
+                    ),
+                    (
+                        504,
+                        "request_timeout: PII_SERVICE_REQUEST_DEADLINE_SECONDS reached",
+                    ),
+                )
+            },
         },
-    },
-}
+    }
+
+
 # Stores the prepared delivery's manifest; raising fails the request (502).
 ManifestStore = Callable[[PreparedDelivery], Awaitable[None]]
 
@@ -219,6 +233,7 @@ class _Dependencies:
     encrypt_manifest: ManifestEncryptor | None
     authenticate: Authenticator
     request_deadline_seconds: float
+    max_source_characters: int
     store_manifest: ManifestStore | None = None
     return_manifest: bool = True
     return_metadata: bool = True
@@ -247,6 +262,8 @@ def _validate_dependencies(deps: _Dependencies) -> None:
         )
         or not callable(deps.authenticate)
         or not _valid_deadline(deps.request_deadline_seconds)
+        or type(deps.max_source_characters) is not int
+        or deps.max_source_characters <= 0
         or (
             deps.store_manifest is not None
             and not _is_async_callable(deps.store_manifest)
@@ -363,7 +380,7 @@ async def _redact(request: Request, deps: _Dependencies) -> Response:
             async with asyncio.timeout_at(deadline):
                 if not await _is_authorized(deps.authenticate, request):
                     return _error(401, "authentication_failed")
-                markdown = await read_document(request)
+                markdown = await read_document(request, deps.max_source_characters)
                 result = await _unless_disconnected(
                     request, _process(markdown, deps, events)
                 )
@@ -522,6 +539,7 @@ def create_app(
     encrypt_manifest: ManifestEncryptor | None,
     authenticate: Authenticator,
     request_deadline_seconds: float,
+    max_source_characters: int = DEFAULT_MAX_SOURCE_CHARACTERS,
     store_manifest: ManifestStore | None = None,
     return_manifest: bool = True,
     return_metadata: bool = True,
@@ -530,8 +548,9 @@ def create_app(
 ) -> FastAPI:
     """Create an adapter with required trusted dependencies and a finite deadline.
 
-    POST /redact accepts raw text/plain or text/markdown, up to 2000 source
-    Unicode codepoints. It waits for detection, independent verification and
+    POST /redact accepts raw text/plain or text/markdown, up to
+    ``max_source_characters`` source Unicode codepoints (one whole page, sent
+    to the LLM as one window). It waits for detection, independent verification and
     encrypted three-part multipart preparation before returning one response.
     The synchronous encryptor must finish promptly; the deadline cannot
     interrupt CPU-bound Python code, but an overrun never returns a success.
@@ -557,6 +576,7 @@ def create_app(
         encrypt_manifest,
         authenticate,
         request_deadline_seconds,
+        max_source_characters,
         store_manifest,
         return_manifest,
         return_metadata,
@@ -589,9 +609,12 @@ def create_app(
         response_class=Response,
         summary="Redact PII in one page",
         openapi_extra=(
-            {**_REDACT_OPENAPI, "security": [{"bearerAuth": []}, {"docsLogin": []}]}
+            {
+                **_redact_openapi(max_source_characters),
+                "security": [{"bearerAuth": []}, {"docsLogin": []}],
+            }
             if docs_login
-            else _REDACT_OPENAPI
+            else _redact_openapi(max_source_characters)
         ),
     )
     async def redact_document(request: Request) -> Response:

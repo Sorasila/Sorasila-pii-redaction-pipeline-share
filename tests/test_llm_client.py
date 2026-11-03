@@ -35,11 +35,18 @@ def isolate_proxy_environment(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def make_settings(**overrides: object) -> LlmProxySettings:
+    # The deadline tests below advance a fake clock by 600 s; keep their budgets
+    # fixed instead of following the service defaults.
+    values: dict[str, object] = {
+        "read_timeout_seconds": 300,
+        "request_deadline_seconds": 600,
+        **overrides,
+    }
     return LlmProxySettings(
         base_url="https://llm-proxy.example/service",
         api_key="synthetic-secret",
         _env_file=None,
-        **overrides,
+        **values,
     )
 
 

@@ -1,7 +1,7 @@
 """Split one Markdown document into page-sized files for /redact requests.
 
 Usage:
-    python split_md_pages.py <input.md> --output-dir <new folder> [--max-chars 2000]
+    python split_md_pages.py <input.md> --output-dir <new folder> [--max-chars 10000]
 
 Each output file holds at most --max-chars Unicode code points, the same unit the
 service counts before NFC normalization. Cut points are chosen in this order:
@@ -84,7 +84,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("input", type=Path)
     parser.add_argument("--output-dir", type=Path, required=True)
-    parser.add_argument("--max-chars", type=int, default=2000)
+    # Matches the service default PII_SERVICE_MAX_SOURCE_CHARACTERS.
+    parser.add_argument("--max-chars", type=int, default=10000)
     parser.add_argument("--prefix", default="page")
     args = parser.parse_args(argv)
 

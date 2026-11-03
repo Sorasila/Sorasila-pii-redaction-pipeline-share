@@ -81,7 +81,7 @@
 | --- | --- |
 | `--max-calls` | เพดาน proxy requests จริงทั้งหมด (รวม selection/repair/retry) |
 | `--max-verification-windows` | เพดาน verification windows ที่วางบน redacted text |
-| `--run-deadline-seconds` | deadline ของทั้ง run (ต่อ request ยังมี read timeout 300s และ request deadline 600s จาก settings) |
+| `--run-deadline-seconds` | deadline ของทั้ง run (ต่อ request ยังมี read timeout 1800s และ request deadline 3600s จาก settings) |
 | `--max-recovery-calls` | role calls เพิ่มสำหรับ repair/selection/retry/residual (default 4) |
 | `--reserved-recovery-calls` | ส่วนของ recovery ที่ initial window repairs ใช้ไม่ได้ เก็บไว้ให้ document merge/verification retry/residual (default 0 = ใช้ร่วมแบบเดิม) |
 | `--max-residual-rounds` | รอบแก้ residual หลัง final verification (0–2, default 1) |
@@ -114,7 +114,7 @@ Terminal แสดง JSON ทีละบรรทัด (flush ทันที
 
 ใน `calls` ของ report แต่ละ call มี `role`, `status` (`SUCCESS`, `DETECTION_ISSUES` + `reason_codes`, `RESIDUAL_DETECTED`, `PROXY_TRANSPORT_ERROR` + `transport_kind`), `proxy_request_timings` และสำหรับ verify มี `finding_types` (ชนิด PII ที่ verification flag ไม่มีค่า)
 
-Error codes ที่พบบ่อย: `PROXY_TRANSPORT_ERROR` (เช่น READ_TIMEOUT เมื่อครบ read timeout ซึ่งตอนนี้คือ 300s), `DETECTION_MERGE_REJECTED` + `reason_code` (เช่น `conflict_recovery_limit`), `RESIDUAL_NOT_RESOLVED` (stage `residual_recovery`: verification ยังพบ PII หลังรอบแก้), `CALL_CAP_EXCEEDED`, `WHOLE_RUN_TIMEOUT` `CALL_WAITING` หมายถึง client ยังรอ ไม่พิสูจน์สถานะฝั่ง proxy
+Error codes ที่พบบ่อย: `PROXY_TRANSPORT_ERROR` (เช่น READ_TIMEOUT เมื่อครบ read timeout ซึ่งตอนนี้คือ 1800s), `DETECTION_MERGE_REJECTED` + `reason_code` (เช่น `conflict_recovery_limit`), `RESIDUAL_NOT_RESOLVED` (stage `residual_recovery`: verification ยังพบ PII หลังรอบแก้), `CALL_CAP_EXCEEDED`, `WHOLE_RUN_TIMEOUT` `CALL_WAITING` หมายถึง client ยังรอ ไม่พิสูจน์สถานะฝั่ง proxy
 
 `CORE_VERIFIED` ไม่รับรองความครบถ้วนของ PII ทั้งไฟล์ ยังต้องให้คนตรวจ `redacted.md` เพื่อประเมิน miss/false positive
 
@@ -134,7 +134,7 @@ Error codes ที่พบบ่อย: `PROXY_TRANSPORT_ERROR` (เช่น R
 
 | Script | ใช้ทำอะไร |
 | --- | --- |
-| `split_md_pages.py <input.md> --output-dir <new> [--max-chars 2000]` | แบ่งเอกสาร `.md` ทั้งฉบับเป็นไฟล์ละไม่เกิน 2000 ตัวอักษร (1 request) ตัดที่ย่อหน้า → บรรทัด → ช่องว่าง ต่อกลับได้ต้นฉบับตรงตัว เขียน `index.json` (offsets/จุดตัด ไม่มีเนื้อหา) ปฏิเสธโฟลเดอร์ที่อยู่ใน Git |
+| `split_md_pages.py <input.md> --output-dir <new> [--max-chars 10000]` | แบ่งเอกสาร `.md` ทั้งฉบับเป็นไฟล์ละไม่เกิน `--max-chars` ตัวอักษร (ค่าเริ่มต้น 10000 เท่ากับ service, 1 request) ตัดที่ย่อหน้า → บรรทัด → ช่องว่าง ต่อกลับได้ต้นฉบับตรงตัว เขียน `index.json` (offsets/จุดตัด ไม่มีเนื้อหา) ปฏิเสธโฟลเดอร์ที่อยู่ใน Git |
 | `diag_window_copy.py <window> [attempts] [repair]` | ตรวจว่า candidate ที่ `value_not_found` ต่างจาก source แบบไหน (whitespace/NFKC/คำนำหน้า/รูปนามแฝง) |
 | `diag_window22.py` | รัน pipeline เต็มของ window เดียวแล้วเขียน `redacted_markdown` + `entries` ให้คนตรวจ |
 | `diag_window22_verify_recall.py` | วัดว่า verification จับ PII ที่ตั้งใจคืนค่าไว้ได้หรือไม่ |

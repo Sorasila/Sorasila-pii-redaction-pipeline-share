@@ -10,7 +10,7 @@
 #
 # A request can take many minutes (the service waits for the LLM proxy), so the
 # platform's stop grace period must be longer than
-# PII_SERVICE_REQUEST_DEADLINE_SECONDS (default 1200), or requests in progress
+# PII_SERVICE_REQUEST_DEADLINE_SECONDS (default 7200), or requests in progress
 # are killed on deploy: Compose stop_grace_period, Kubernetes
 # terminationGracePeriodSeconds.
 

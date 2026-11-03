@@ -209,14 +209,17 @@ async def test_plain_literal_quotes_and_json_examples_are_not_decoded(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [None, 5])
 @pytest.mark.parametrize("character", ["x", "ก", "😀"])
-@pytest.mark.parametrize("count, status", [(2000, 200), (2001, 413)])
+@pytest.mark.parametrize("extra, status", [(0, 200), (1, 413)])
 async def test_limit_counts_unicode_codepoints_not_utf8_bytes(
-    character, count, status
+    limit, character, extra, status
 ) -> None:
-    source = character * count
+    overrides = {} if limit is None else {"max_source_characters": limit}
+    source = character * ((limit or http_api.DEFAULT_MAX_SOURCE_CHARACTERS) + extra)
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app()), base_url="https://api.example"
+        transport=httpx.ASGITransport(app=app(**overrides)),
+        base_url="https://api.example",
     ) as client:
         response = await client.post(
             "/redact", content=source.encode(), headers={"Content-Type": "text/plain"}
@@ -239,25 +242,25 @@ async def test_source_limit_precedes_core_nfc_normalization() -> None:
         seen.append(source)
         return []
 
-    application = app(detect=detect)
+    application = app(detect=detect, max_source_characters=10)
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=application), base_url="https://api.example"
     ) as client:
         accepted = await client.post(
             "/redact",
-            content=("e\u0301" * 1000).encode(),
+            content=("e\u0301" * 5).encode(),
             headers={"Content-Type": "text/plain"},
         )
         rejected = await client.post(
             "/redact",
-            content=("e\u0301" * 1001).encode(),
+            content=("e\u0301" * 6).encode(),
             headers={"Content-Type": "text/plain"},
         )
     assert accepted.status_code == 200
-    assert seen == ["é" * 1000]
+    assert seen == ["é" * 5]
     assert (
         multipart_parts(accepted)["redacted_md"].get_payload(decode=True)
-        == ("é" * 1000).encode()
+        == ("é" * 5).encode()
     )
     assert rejected.status_code == 413
 
@@ -317,7 +320,12 @@ async def test_source_limit_precedes_core_nfc_normalization() -> None:
             413,
             "document_too_large",
         ),
-        ({"Content-Type": "text/plain"}, b"x" * 4001, 413, "document_too_large"),
+        (
+            {"Content-Type": "text/plain"},
+            b"x" * (http_api.DEFAULT_MAX_SOURCE_CHARACTERS + 1),
+            413,
+            "document_too_large",
+        ),
     ],
 )
 async def test_invalid_requests_never_call_processing_or_package(
@@ -418,7 +426,8 @@ async def test_stream_size_bound_does_not_trust_declared_content_length() -> Non
             yield b"x" * 1500
 
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app()), base_url="https://api.example"
+        transport=httpx.ASGITransport(app=app(max_source_characters=2000)),
+        base_url="https://api.example",
     ) as client:
         response = await client.post(
             "/redact",
@@ -771,6 +780,12 @@ def test_invalid_deadlines_reject_factory_without_sensitive_details(deadline) ->
         HttpApiConfigurationError, match="^HTTP API configuration is invalid$"
     ):
         app(request_deadline_seconds=deadline)
+
+
+@pytest.mark.parametrize("limit", [False, True, "10", None, 0, -1, 10.0])
+def test_invalid_source_limits_reject_factory(limit) -> None:
+    with pytest.raises(HttpApiConfigurationError):
+        app(max_source_characters=limit)
 
 
 @pytest.mark.parametrize(

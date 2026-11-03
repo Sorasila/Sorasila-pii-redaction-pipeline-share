@@ -4,8 +4,9 @@ Usage (service running, from the repository root):
     python tools/redact_client.py samples/synthetic/*.md --output-dir ../redact-out
         [--url http://127.0.0.1:8080/redact] [--env-file .env]
 
-Each file is one request (at most 2000 Unicode code points, as the service
-requires). For every file the output folder receives:
+Each file is one request (at most PII_SERVICE_MAX_SOURCE_CHARACTERS Unicode
+code points, default 10000, as the service requires). For every file the
+output folder receives:
 
     <name>.redacted.md        redacted_md part, exact bytes
     <name>.metadata.json      metadata part (only with PII_SERVICE_RETURN_METADATA
@@ -38,7 +39,7 @@ from pathlib import Path
 import httpx
 
 REPO = Path(__file__).resolve().parents[1]
-MAX_CODE_POINTS = 2000
+DEFAULT_MAX_CODE_POINTS = 10000
 UNENCRYPTED_TEST_KID = "UNENCRYPTED-TEST-ONLY"
 
 
@@ -61,7 +62,7 @@ def inside_git_repository(path: Path) -> bool:
     return any((parent / ".git").exists() for parent in (path, *path.parents))
 
 
-def page_problem(data: bytes) -> str | None:
+def page_problem(data: bytes, max_code_points: int) -> str | None:
     """Reasons the service would reject the page, checked before sending."""
     try:
         text = data.decode("utf-8")
@@ -69,7 +70,7 @@ def page_problem(data: bytes) -> str | None:
         return "not_utf8"
     if not text.strip():
         return "empty"
-    if len(text) > MAX_CODE_POINTS:
+    if len(text) > max_code_points:
         return f"too_long_{len(text)}_code_points"
     return None
 
@@ -164,7 +165,14 @@ def main() -> int:
         )
         return 1
     deadline = float(
-        setting("PII_SERVICE_REQUEST_DEADLINE_SECONDS", env_values, "1200")
+        setting("PII_SERVICE_REQUEST_DEADLINE_SECONDS", env_values, "7200")
+    )
+    max_code_points = int(
+        setting(
+            "PII_SERVICE_MAX_SOURCE_CHARACTERS",
+            env_values,
+            str(DEFAULT_MAX_CODE_POINTS),
+        )
     )
     output.mkdir(parents=True, exist_ok=True)
 
@@ -182,7 +190,7 @@ def main() -> int:
                 return 1
             data = path.read_bytes()
             record = {"file": path.name}
-            problem = page_problem(data)
+            problem = page_problem(data, max_code_points)
             started = time.perf_counter()
             if problem:
                 record.update(status="SKIPPED", reason=problem)

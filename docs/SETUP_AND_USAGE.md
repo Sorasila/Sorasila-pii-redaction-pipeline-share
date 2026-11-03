@@ -33,7 +33,7 @@
 ## 1. ภาพรวม
 
 ```text
-ไฟล์ .md (หน้าละไม่เกิน 2000 ตัวอักษร)
+ไฟล์ .md (ทั้งหน้า ค่าเริ่มต้นไม่เกิน 10000 ตัวอักษร)
    │  tools/redact_client.py ส่งทีละหน้า
    ▼
 service บนเครื่องคุณ (POST /redact)  ──►  LLM proxy (ต้องเข้าถึงได้)
@@ -127,7 +127,9 @@ LLM_PROXY_VERIFY_TLS=false
 
 | ค่า | ค่าเริ่มต้น | ใช้เมื่อ |
 | --- | --- | --- |
-| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | `1200` | เครื่อง LLM ช้ามากจนหน้ายาวๆ ได้ 504 บ่อย เพิ่มเป็น `1800` ได้ระหว่างทดสอบ |
+| `PII_SERVICE_REQUEST_DEADLINE_SECONDS` | `7200` | เวลาสูงสุดต่อหน้า (2 ชั่วโมง) ตั้งไว้ยาวเพื่อรอ LLM ทำทั้งหน้าจนเสร็จ ลดลงได้ถ้าไม่อยากรอนาน |
+| `PII_SERVICE_MAX_SOURCE_CHARACTERS` | `10000` | ความยาวสูงสุดของหน้าที่รับ ทั้งหน้าส่งให้ LLM ในครั้งเดียว หน้ายิ่งยาวยิ่งใช้เวลานาน |
+| `LLM_PROXY_READ_TIMEOUT_SECONDS` | `1800` | เวลารอคำตอบจาก LLM ต่อครั้ง (30 นาที) |
 | `LLM_PROXY_MAX_RETRIES` | `2` | จำนวนครั้งที่ลองส่งซ้ำเมื่อ proxy ตอบ 502/503/504 |
 
 `.env` ถูก git ignore ไว้แล้ว **ห้ามส่งไฟล์นี้หรือค่าในไฟล์ให้ใคร**
@@ -171,7 +173,7 @@ curl.exe -s http://127.0.0.1:8080/readyz
 
 - `samples\synthetic\` มีหน้าทดสอบ 3 หน้า ข้อมูลทั้งหมดแต่งขึ้น ไม่ใช่บุคคลหรือคดีจริง
 - `--output-dir` คือโฟลเดอร์เก็บผล **ต้องอยู่นอก repo** (client ไม่ยอมเขียนลงโฟลเดอร์ที่เป็น git repo)
-- แต่ละหน้าใช้เวลา 1 ถึงหลายนาที แล้วแต่ความเร็วของเครื่อง LLM ช่วงนั้น
+- แต่ละหน้าใช้เวลา 1 ถึงหลายนาที หน้าที่ยาวใช้เวลานานขึ้น แล้วแต่ความเร็วของเครื่อง LLM ช่วงนั้น
 
 ระหว่างรัน หน้าต่างที่ 2 แสดงผลทีละหน้า เช่น
 
@@ -196,9 +198,9 @@ Done: 3/3 verified. Results in C:\...\redact-out
 
 ### 6.3 ใช้กับเอกสารของตัวเอง
 
-- ไฟล์ต้องเป็น Markdown หรือข้อความ UTF-8 **หน้าละไม่เกิน 2000 ตัวอักษร** (นับแบบ Unicode code point)
-  ไฟล์ที่ยาวกว่านี้ client จะข้ามพร้อมเหตุผล `too_long_<จำนวน>_code_points` โดยไม่ส่ง
-- เอกสารยาวต้องแบ่งเป็นหลายไฟล์ก่อน ควรตัดที่ย่อหน้าหรือบรรทัด ไม่ตัดกลางชื่อหรือที่อยู่
+- ไฟล์ต้องเป็น Markdown หรือข้อความ UTF-8 **หน้าละไม่เกิน `PII_SERVICE_MAX_SOURCE_CHARACTERS` (ค่าเริ่มต้น 10000) ตัวอักษร**
+  (นับแบบ Unicode code point) ส่งทั้งหน้าได้เลยไม่ต้องแบ่ง ไฟล์ที่ยาวกว่านี้ client จะข้ามพร้อมเหตุผล `too_long_<จำนวน>_code_points` โดยไม่ส่ง
+- เอกสารที่ยาวเกินค่านี้ต้องแบ่งเป็นหลายไฟล์ก่อน ควรตัดที่ย่อหน้าหรือบรรทัด ไม่ตัดกลางชื่อหรือที่อยู่
   ใช้ `tools\split_md_pages.py` แบ่งให้ได้ (ตัดที่บรรทัดว่างก่อน แล้วท้ายบรรทัด แล้วช่องว่าง ตัดกลางคำเป็นทางสุดท้าย; ต่อไฟล์กลับได้เท่าต้นฉบับทุกตัวอักษร):
   ```powershell
   .venv\Scripts\python.exe tools\split_md_pages.py <เอกสาร.md> --output-dir ..\my-doc
@@ -238,7 +240,8 @@ WARNING redact document_id=… status=502 seconds=801.7 ... residual=findings:AD
 | service เริ่มไม่ได้ ขึ้น `No manifest encryptor is configured` | ยังไม่ได้เปิดโหมดทดสอบ รันข้อ 4.1 |
 | `502` และ log มี `LlmProxyTransportError` | เข้าถึง proxy ไม่ได้: เช็ค VPN/network และ `LLM_PROXY_BASE_URL` |
 | `502` และ log มี `VerificationError` | ตรวจซ้ำแล้วยังเจอ PII หรือ LLM ใช้งานไม่ได้ช่วงนั้น ลองส่งหน้านั้นใหม่ |
-| `504` หรือ `request_timeout` | เครื่อง LLM ช้าจนหมดเวลา ลองใหม่ หรือเพิ่ม `PII_SERVICE_REQUEST_DEADLINE_SECONDS` (ข้อ 4.3) |
+| `504` หรือ `request_timeout` | เครื่อง LLM ช้าจนหมดเวลา (ค่าเริ่มต้น 2 ชั่วโมง) ลองใหม่ หรือเพิ่ม `PII_SERVICE_REQUEST_DEADLINE_SECONDS` (ข้อ 4.3) |
+| `413` หรือ `too_long_<จำนวน>_code_points` | หน้ายาวเกิน `PII_SERVICE_MAX_SOURCE_CHARACTERS` เพิ่มค่านี้ใน `.env` (แล้วเปิด service ใหม่) หรือแบ่งไฟล์ด้วย `tools\split_md_pages.py` |
 | `STOPPED: the output folder is inside a Git repository` | เลือก `--output-dir` ที่อยู่นอก repo เช่น `..\redact-out` |
 | `STOPPED: results for <ชื่อ> already exist` | ใช้โฟลเดอร์ผลใหม่ หรือลบผลเก่าของหน้านั้น |
 | port 8080 ถูกใช้อยู่ | เปิด service ด้วย `--port 8081` แล้วเพิ่ม `--url http://127.0.0.1:8081/redact` ตอนส่ง |

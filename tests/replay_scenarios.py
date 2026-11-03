@@ -350,7 +350,7 @@ SCENARIOS = {
 # Service-only requests the adapter rejects before any proxy call.
 REJECTIONS = {
     "empty_body_is_rejected": {"body": b""},
-    "too_long_body_is_rejected": {"body": ("ก" * 2001).encode("utf-8")},
+    "too_long_body_is_rejected": {"body": ("ก" * 10001).encode("utf-8")},
     "wrong_content_type_is_rejected": {"headers": {"content-type": "application/json"}},
     "wrong_token_is_rejected": {"headers": {"authorization": "Bearer " + "x" * 40}},
 }

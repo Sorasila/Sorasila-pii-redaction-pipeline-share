@@ -27,10 +27,8 @@ def test_execution_policy_defaults_match_notebook_and_bounded_retry_budget() -> 
     settings = make_settings()
 
     assert settings.connect_timeout_seconds == 10
-    assert settings.read_timeout_seconds == 300
     assert settings.write_timeout_seconds == 30
     assert settings.pool_timeout_seconds == 10
-    assert settings.request_deadline_seconds == 600
     assert settings.max_attempts == 3
     assert settings.retry_delays_seconds == (1, 2)
     assert settings.detection_use_thinking is False

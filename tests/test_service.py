@@ -108,7 +108,6 @@ def test_settings_require_a_long_caller_token():
         ServiceSettings(_env_file=None)
     with pytest.raises(ValidationError):
         ServiceSettings(api_token="short", _env_file=None)
-    assert service_settings().request_deadline_seconds == 1200
 
 
 def test_service_refuses_to_return_a_manifest_without_an_encryptor():

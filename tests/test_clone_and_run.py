@@ -85,10 +85,10 @@ def test_service_rejects_the_example_placeholder_token():
 
 
 def test_client_checks_pages_before_sending(tmp_path):
-    assert client.page_problem("ก".encode() * 2000) is None
-    assert client.page_problem("ก".encode() * 2001) == "too_long_2001_code_points"
-    assert client.page_problem(b"\xff") == "not_utf8"
-    assert client.page_problem(b"  \n") == "empty"
+    assert client.page_problem("ก".encode() * 10, 10) is None
+    assert client.page_problem("ก".encode() * 11, 10) == "too_long_11_code_points"
+    assert client.page_problem(b"\xff", 10) == "not_utf8"
+    assert client.page_problem(b"  \n", 10) == "empty"
     repository = tmp_path / "repo"
     (repository / ".git").mkdir(parents=True)
     assert client.inside_git_repository(repository / "results" / "run-1")
@@ -189,7 +189,7 @@ EXPECTED_RULES = {
 @pytest.mark.parametrize("name", sorted(EXPECTED_RULES))
 def test_synthetic_pages_are_valid_requests_with_the_documented_rule_hits(name):
     text = (SAMPLES / name).read_text(encoding="utf-8")
-    assert client.page_problem(text.encode("utf-8")) is None
+    assert client.page_problem(text.encode("utf-8"), client.DEFAULT_MAX_CODE_POINTS) is None
     assert unicodedata.is_normalized("NFC", text)
     assert "[PII_" not in text
     assert "ข้อมูลสังเคราะห์" in text

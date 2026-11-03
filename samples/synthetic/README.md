@@ -5,7 +5,7 @@ place, case and number here is fictional: numbers use obvious patterns (`0000`,
 `1 2345 67890 12 3`) and the e-mail uses the reserved `example.com` domain. Real
 documents must never be added to the repository.
 
-Each page is one request (under 2000 code points). Send them with
+Each page is one request (under the service limit, 10000 code points by default). Send them with
 [`tools/redact_client.py`](../../tools/redact_client.py).
 
 ## What should be redacted

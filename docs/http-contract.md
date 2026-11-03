@@ -15,10 +15,11 @@ Adapter ใช้ `POST /redact` โดยรับ body เป็นข้อ�
 ```
 
 แต่ละ request จบในตัวเอง ไม่รวม session หรือข้อความจาก requests อื่น
-จำกัดต้นฉบับที่ 2000 Unicode codepoints (เพิ่มจาก 1000 เมื่อ 2026-10-05) ก่อน NFC normalization และอ่าน body
-ไม่เกิน 8000 UTF-8 bytes (4 bytes ต่อ code point) ทั้งสองเงื่อนไขต้องผ่าน ตัวอักษรในที่นี้ไม่ใช่ bytes,
+หนึ่ง request คือหนึ่งหน้าทั้งหน้า จำกัดต้นฉบับที่ `PII_SERVICE_MAX_SOURCE_CHARACTERS` Unicode codepoints
+(ค่าเริ่มต้น 10000; 1000 → 2000 เมื่อ 2026-10-05, 2000 → 10000 และตั้งค่าได้เมื่อ 2026-11-03) ก่อน NFC normalization
+และอ่าน body ไม่เกิน 4 UTF-8 bytes ต่อ code point ของค่านั้น ทั้งสองเงื่อนไขต้องผ่าน ตัวอักษรในที่นี้ไม่ใช่ bytes,
 UTF-16 code units, grapheme clusters หรือ LLM tokens
-ไม่ตัดข้อความที่เกินเกณฑ์และไม่แยกส่ง LLM เพิ่มโดยอัตโนมัติ
+ไม่ตัดข้อความที่เกินเกณฑ์และไม่แยกส่ง LLM เพิ่มโดยอัตโนมัติ ทั้งหน้าส่งให้ LLM ในครั้งเดียว
 เก็บ whitespace/newlines ของข้อความไว้ตาม core contract
 
 Caller ต้องผ่าน authentication ที่ deployment กำหนดก่อนอ่าน body/เรียก core
@@ -112,7 +113,8 @@ API เรียก fixed `prepare_delivery()` ภายในเอง ไม�
 
 `pii_pipeline.service.create_service_app` (รันด้วย `uvicorn --factory`) คือ composition ที่ใช้ทดสอบตอนนี้:
 rule lane `detect_thai_rule_pii` ทั้ง detection และ rule verification, LLM lane พร้อม automatic recovery,
-หนึ่ง window ต่อ request, deadline `PII_SERVICE_REQUEST_DEADLINE_SECONDS` (ค่าเริ่มต้น 1200 วินาที)
+หนึ่ง window ต่อ request (ทั้งหน้าส่งให้ LLM ในครั้งเดียว), ขนาดหน้าสูงสุด `PII_SERVICE_MAX_SOURCE_CHARACTERS` (ค่าเริ่มต้น 10000),
+deadline `PII_SERVICE_REQUEST_DEADLINE_SECONDS` (ค่าเริ่มต้น 7200 วินาที)
 และ Bearer token ชั่วคราว `PII_SERVICE_API_TOKEN` จนกว่าจะตกลงวิธี authentication กับ dev
 ค่าเริ่มต้น `PII_SERVICE_RETURN_METADATA=false` และ `PII_SERVICE_RETURN_MANIFEST=false` ตอบแค่ Markdown ที่ redact แล้ว ไม่สร้าง manifest และไม่ต้องมี encryptor; เมื่อเปิดส่ง (หรือเปิดที่เก็บ manifest) ระหว่างที่ยังไม่มี encryptor จริง service เริ่มได้เฉพาะเมื่อตั้ง `PII_SERVICE_ALLOW_UNENCRYPTED_TEST_MANIFEST=true`
 ซึ่ง `pii_manifest` เป็น envelope รูป JWE ที่มี `kid` `UNENCRYPTED-TEST-ONLY` และ `ciphertext` คือ manifest แบบ **plaintext**

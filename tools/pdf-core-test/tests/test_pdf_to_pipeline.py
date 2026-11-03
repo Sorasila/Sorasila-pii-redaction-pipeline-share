@@ -65,6 +65,7 @@ def settings():
         api_key="synthetic-key",
         _env_file=None,
         max_retries=0,
+        read_timeout_seconds=300,
         detection_use_thinking=True,
     )
 
